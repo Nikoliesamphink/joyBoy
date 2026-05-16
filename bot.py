@@ -37,7 +37,7 @@ logging.basicConfig(level=logging.INFO)
 # ─────────────────────────────────────────────
 
 EMBED_COLOR = 0xD97706   # Dark orange
-BOT_PREFIX  = ["!Joy ", "!joy ", "!J ", "!j "]
+BOT_PREFIX  = "!Joy "
 CONFIG_PATH = "data/config.json"
 WIB         = pytz.timezone("Asia/Jakarta")
 
@@ -918,6 +918,10 @@ async def on_message(message: discord.Message):
                 spam_cleanup_times[uid] = now
 
     # ── Prefix command routing ────────────────────────────────────────────
+    # Alias !j / !J → !Joy (prefix pendek)
+    low = message.content.lower()
+    if low.startswith("!j ") and not low.startswith("!joy "):
+        message.content = "!Joy " + message.content[3:]
     await bot.process_commands(message)
 
     # ── XP + Quest gain ──────────────────────────────────────────────────
