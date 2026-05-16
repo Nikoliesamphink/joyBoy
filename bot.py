@@ -39,23 +39,15 @@ logging.basicConfig(level=logging.INFO)
 EMBED_COLOR = 0xD97706   # Dark orange
 CONFIG_PATH = "data/config.json"
 
-# ── Case-insensitive prefix: !J, !j, !Joy, !JOY, !joy, dll ──────────────────
-def get_prefix(bot, message):
-    """
-    Accept any capitalisation of '!Joy' and shorthand '!J'.
-    Examples that all work:
-        !j help  │  !J help  │  !joy help  │  !Joy help  │  !JOY help
-    The prefix must be followed by at least one space before the command name.
-    """
-    content = message.content
-    for prefix in ("!joy ", "!j "):
-        if content.lower().startswith(prefix):
-            # Return the ACTUAL characters the user typed (preserving case)
-            # so discord.py strips the right number of characters.
-            return content[: len(prefix)]
-    return "!Joy "   # fallback (never matched, just satisfies the type contract)
+# ── Semua variasi prefix yang valid (case-insensitive manual) ─────────────────
+async def get_prefix(bot, message):
+    prefixes = [
+        "!Joy ", "!joy ", "!JOY ", "!JoY ", "!jOy ", "!jOY ", "!JOy ",
+        "!J ", "!j ",
+    ]
+    return commands.when_mentioned_or(*prefixes)(bot, message)
 
-BOT_PREFIX = get_prefix   # kept so existing references don't break
+BOT_PREFIX = get_prefix
 WIB         = pytz.timezone("Asia/Jakarta")
 
 # ─────────────────────────────────────────────
