@@ -37,8 +37,25 @@ logging.basicConfig(level=logging.INFO)
 # ─────────────────────────────────────────────
 
 EMBED_COLOR = 0xD97706   # Dark orange
-BOT_PREFIX  = "!Joy "
 CONFIG_PATH = "data/config.json"
+
+# ── Case-insensitive prefix: !J, !j, !Joy, !JOY, !joy, dll ──────────────────
+def get_prefix(bot, message):
+    """
+    Accept any capitalisation of '!Joy' and shorthand '!J'.
+    Examples that all work:
+        !j help  │  !J help  │  !joy help  │  !Joy help  │  !JOY help
+    The prefix must be followed by at least one space before the command name.
+    """
+    content = message.content
+    for prefix in ("!joy ", "!j "):
+        if content.lower().startswith(prefix):
+            # Return the ACTUAL characters the user typed (preserving case)
+            # so discord.py strips the right number of characters.
+            return content[: len(prefix)]
+    return "!Joy "   # fallback (never matched, just satisfies the type contract)
+
+BOT_PREFIX = get_prefix   # kept so existing references don't break
 WIB         = pytz.timezone("Asia/Jakarta")
 
 # ─────────────────────────────────────────────
@@ -422,7 +439,7 @@ class JoyCommandTree(app_commands.CommandTree):
         return False
 
 bot = commands.Bot(
-    command_prefix=BOT_PREFIX,
+    command_prefix=get_prefix,
     intents=intents,
     help_command=None,
     owner_id=int(os.getenv("OWNER_ID", "0")),
@@ -4517,6 +4534,218 @@ async def slash_giveaway_list(i: discord.Interaction):
 
 
 bot.tree.add_command(giveaway_group)
+
+
+# ─────────────────────────────────────────────
+# ══════════════════════════════════════════
+#  TOP UP GAME SYSTEM
+#  /topup         → embed link ke website (semua user)
+#  !j topup       → sama, via prefix (semua user)
+#  !j settopup    → owner: set/edit link & embed (owner only)
+# ══════════════════════════════════════════
+# ─────────────────────────────────────────────
+
+def get_topup_data() -> dict:
+    """Ambil data topup dari config, dengan default kosong."""
+    return cfg.setdefault("topup", {
+        "url":         "",
+        "title":       "🎮 Top Up Game",
+        "description": "Top up game favoritmu dengan cepat, aman, dan harga terjangkau!",
+        "button_label": "Kunjungi Website",
+        "thumbnail":   "",
+        "color":       0xD97706,
+    })
+
+def save_topup(data: dict):
+    cfg["topup"] = data
+    save_config(cfg)
+
+def build_topup_embed() -> tuple[discord.Embed, discord.ui.View | None]:
+    """Buat embed + button topup. Return (embed, view)."""
+    d     = get_topup_data()
+    color = d.get("color", 0xD97706)
+    embed = discord.Embed(
+        title       = d.get("title", "🎮 Top Up Game"),
+        description = d.get("description", ""),
+        color       = color,
+        timestamp   = discord.utils.utcnow(),
+    )
+    embed.set_footer(text="JoyCannot Bot • Top Up Game")
+
+    thumb = d.get("thumbnail", "")
+    if thumb:
+        embed.set_thumbnail(url=thumb)
+
+    url = d.get("url", "").strip()
+    if url:
+        embed.add_field(name="🔗 Link", value=f"[{d.get('button_label','Kunjungi Website')}]({url})", inline=False)
+        view = discord.ui.View()
+        btn  = discord.ui.Button(
+            label = d.get("button_label", "Kunjungi Website"),
+            url   = url,
+            style = discord.ButtonStyle.link,
+            emoji = "🛒",
+        )
+        view.add_item(btn)
+    else:
+        embed.add_field(
+            name  = "⚠️ Belum dikonfigurasi",
+            value = "Owner belum mengatur link website. Gunakan `!j settopup` untuk setup.",
+            inline=False
+        )
+        view = None
+
+    return embed, view
+
+
+# ── Slash command: /topup ─────────────────────────────────────────────────────
+@bot.tree.command(name="topup", description="Top Up Game — kunjungi website top up resmi kami.")
+async def slash_topup(i: discord.Interaction):
+    embed, view = build_topup_embed()
+    await i.response.send_message(embed=embed, view=view)
+
+
+# ── Prefix command: !j topup ──────────────────────────────────────────────────
+@bot.command(name="topup")
+async def pfx_topup(ctx: commands.Context):
+    """!j topup — Tampilkan embed link Top Up Game."""
+    embed, view = build_topup_embed()
+    await ctx.send(embed=embed, view=view)
+
+
+# ── Owner setup modal ─────────────────────────────────────────────────────────
+class TopupSetupModal(discord.ui.Modal, title="⚙️ Setup Top Up Game"):
+    f_url   = discord.ui.TextInput(
+        label       = "URL Website",
+        placeholder = "https://topupgame.com/...",
+        required    = True,
+        max_length  = 500,
+    )
+    f_title = discord.ui.TextInput(
+        label       = "Judul Embed",
+        placeholder = "🎮 Top Up Game",
+        required    = False,
+        max_length  = 100,
+        default     = "🎮 Top Up Game",
+    )
+    f_desc  = discord.ui.TextInput(
+        label       = "Deskripsi Embed",
+        placeholder = "Top up game favoritmu dengan cepat dan aman!",
+        required    = False,
+        style       = discord.TextStyle.paragraph,
+        max_length  = 500,
+    )
+    f_btn   = discord.ui.TextInput(
+        label       = "Label Tombol",
+        placeholder = "Kunjungi Website",
+        required    = False,
+        max_length  = 80,
+        default     = "Kunjungi Website",
+    )
+    f_thumb = discord.ui.TextInput(
+        label       = "Thumbnail URL (opsional)",
+        placeholder = "https://i.imgur.com/... (kosongkan jika tidak perlu)",
+        required    = False,
+        max_length  = 500,
+    )
+
+    async def on_submit(self, i: discord.Interaction):
+        d = get_topup_data()
+        d["url"]          = self.f_url.value.strip()
+        d["title"]        = self.f_title.value.strip() or "🎮 Top Up Game"
+        d["description"]  = self.f_desc.value.strip()
+        d["button_label"] = self.f_btn.value.strip() or "Kunjungi Website"
+        d["thumbnail"]    = self.f_thumb.value.strip()
+        save_topup(d)
+
+        embed, view = build_topup_embed()
+        confirm = success_embed(
+            f"✅ **Top Up Game berhasil diupdate!**\n\n"
+            f"🔗 URL: {d['url']}\n"
+            f"📝 Judul: {d['title']}\n"
+            f"🔘 Tombol: {d['button_label']}\n\n"
+            "Preview embed dikirim di bawah."
+        )
+        await i.response.send_message(embed=confirm, ephemeral=True)
+        await i.followup.send(embed=embed, view=view, ephemeral=True)
+
+
+class TopupSetupView(discord.ui.View):
+    def __init__(self, owner_id: int):
+        super().__init__(timeout=120)
+        self.owner_id = owner_id
+
+    async def interaction_check(self, i: discord.Interaction) -> bool:
+        if i.user.id != self.owner_id:
+            await i.response.send_message(embed=error_embed("❌ Owner only."), ephemeral=True)
+            return False
+        return True
+
+    @discord.ui.button(label="⚙️ Edit / Set Link", style=discord.ButtonStyle.primary, emoji="✏️")
+    async def edit_btn(self, i: discord.Interaction, _: discord.ui.Button):
+        d     = get_topup_data()
+        modal = TopupSetupModal()
+        modal.f_url.default   = d.get("url", "")
+        modal.f_title.default = d.get("title", "🎮 Top Up Game")
+        modal.f_desc.default  = d.get("description", "")
+        modal.f_btn.default   = d.get("button_label", "Kunjungi Website")
+        modal.f_thumb.default = d.get("thumbnail", "")
+        await i.response.send_modal(modal)
+
+    @discord.ui.button(label="👁️ Preview", style=discord.ButtonStyle.secondary, emoji="🔍")
+    async def preview_btn(self, i: discord.Interaction, _: discord.ui.Button):
+        embed, view = build_topup_embed()
+        await i.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @discord.ui.button(label="🗑️ Reset", style=discord.ButtonStyle.danger, emoji="♻️")
+    async def reset_btn(self, i: discord.Interaction, _: discord.ui.Button):
+        cfg["topup"] = {
+            "url":          "",
+            "title":        "🎮 Top Up Game",
+            "description":  "Top up game favoritmu dengan cepat, aman, dan harga terjangkau!",
+            "button_label": "Kunjungi Website",
+            "thumbnail":    "",
+            "color":        0xD97706,
+        }
+        save_config(cfg)
+        await i.response.send_message(embed=success_embed("✅ Data Top Up Game direset."), ephemeral=True)
+
+
+# ── Prefix command: !j settopup (owner only) ──────────────────────────────────
+@bot.command(name="settopup")
+@is_owner()
+async def pfx_settopup(ctx: commands.Context):
+    """!j settopup — Owner: setup/edit embed Top Up Game."""
+    d = get_topup_data()
+
+    embed = base_embed(
+        "🎮 Top Up Game — Setup",
+        "Kelola tampilan dan link website Top Up Game.\n"
+        "Klik **Edit / Set Link** untuk mengisi atau mengubah data."
+    )
+    embed.add_field(
+        name  = "📋 Status Saat Ini",
+        value = (
+            f"🔗 URL: `{d.get('url') or 'Belum diset'}`\n"
+            f"📝 Judul: `{d.get('title', '🎮 Top Up Game')}`\n"
+            f"🔘 Tombol: `{d.get('button_label', 'Kunjungi Website')}`\n"
+            f"🖼️ Thumbnail: `{'Ada' if d.get('thumbnail') else 'Tidak ada'}`"
+        ),
+        inline=False
+    )
+    embed.add_field(
+        name  = "💡 Cara Pakai",
+        value = (
+            "`!j topup` / `/topup` → user lihat embed\n"
+            "`!j settopup` → owner edit link & tampilan"
+        ),
+        inline=False
+    )
+    await ctx.send(embed=embed, view=TopupSetupView(ctx.author.id))
+
+
+# Tambahkan settopup ke daftar owner-only agar premium gate skip command ini
+OWNER_ONLY_CMDS.add("settopup")
 
 
 if __name__ == "__main__":
