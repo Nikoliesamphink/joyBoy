@@ -662,6 +662,12 @@ def _spam_fingerprint(message: discord.Message) -> str:
 
 OWNER_ONLY_CMDS = {"maintenance", "premium", "setchannel", "noprefix"}
 
+def is_owner():
+    async def predicate(ctx: commands.Context) -> bool:
+        return ctx.author.id == bot.owner_id
+    return commands.check(predicate)
+
+
 # ── Global prefix premium gate ─────────────────────────────────────────────
 @bot.check
 async def global_prefix_premium_check(ctx: commands.Context) -> bool:
@@ -3120,10 +3126,7 @@ async def pfx_noprefix(ctx: commands.Context, action: str = "", *, target: str =
 # ══════════════════════════════════════════
 # ─────────────────────────────────────────────
 
-def is_owner():
-    async def predicate(ctx: commands.Context) -> bool:
-        return ctx.author.id == bot.owner_id
-    return commands.check(predicate)
+# is_owner moved to top
 
 
 def build_premium_embed() -> discord.Embed:
