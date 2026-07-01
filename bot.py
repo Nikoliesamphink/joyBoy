@@ -2851,22 +2851,64 @@ async def pfx_ticket(ctx: commands.Context, sub: str = "", *args):
 
 @bot.command(name="rank")
 async def pfx_rank(ctx: commands.Context, member: discord.Member = None):
-    target   = member or ctx.author
-    gc       = guild_cfg(cfg, ctx.guild.id)
-    data     = get_member_xp(gc, str(target.id))
+    target      = member or ctx.author
+    gc          = guild_cfg(cfg, ctx.guild.id)
+    data        = get_member_xp(gc, str(target.id))
     lvl, cx, nx = xp_progress(data["xp"])
-    all_m    = sorted(gc["members_xp"].items(), key=lambda x: x[1].get("xp", 0), reverse=True)
-    rank     = next((i+1 for i, (uid, _) in enumerate(all_m) if uid == str(target.id)), "?")
-    pct      = int((cx / max(nx, 1)) * 100)
-    bar      = "=" * int(pct / 100 * 16) + "-" * (16 - int(pct / 100 * 16))
-    embed    = discord.Embed(
+    all_m       = sorted(gc["members_xp"].items(), key=lambda x: x[1].get("xp", 0), reverse=True)
+    rank        = next((i+1 for i, (uid, _) in enumerate(all_m) if uid == str(target.id)), 1)
+    pct         = int((cx / max(nx, 1)) * 100)
+
+    # Avatar URL — some-random-api butuh PNG, force format
+    avatar_url = str(target.display_avatar.with_format("png").with_size(256))
+
+    # Warna progress bar: gold untuk premium, orange default
+    is_prem   = user_has_premium(ctx.guild, target)
+    bar_color = "F59E0B" if is_prem else "D97706"
+
+    # ── Some Random API — rank card ───────────────────────────────────────
+    # Docs: https://some-random-api.com/canvas/misc/rank-card
+    import aiohttp, io
+    api_url = (
+        "https://some-random-api.com/canvas/misc/rank-card"
+        f"?username={target.display_name}"
+        f"&avatar={avatar_url}"
+        f"&currentxp={cx}"
+        f"&neededxp={nx}"
+        f"&level={lvl}"
+        f"&rank={rank}"
+        f"&barcolor={bar_color}"
+    )
+
+    async with ctx.typing():
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                    if resp.status == 200 and "image" in resp.content_type:
+                        img_bytes = await resp.read()
+                        file = discord.File(
+                            io.BytesIO(img_bytes),
+                            filename="rank.png"
+                        )
+                        # Kirim image + info singkat di embed
+                        embed = discord.Embed(color=int(bar_color, 16), timestamp=discord.utils.utcnow())
+                        embed.set_author(name=f"Rank Card — {target.display_name}", icon_url=target.display_avatar.url)
+                        embed.set_image(url="attachment://rank.png")
+                        embed.set_footer(text=f"Total XP: {data['xp']:,} · Messages: {data.get('messages',0):,} · {ctx.guild.name}")
+                        return await ctx.send(file=file, embed=embed)
+        except Exception:
+            pass
+
+    # ── Fallback: embed teks kalau API gagal ─────────────────────────────
+    bar  = "▰" * int(pct / 100 * 16) + "▱" * (16 - int(pct / 100 * 16))
+    embed = discord.Embed(
         description=(
             f"**@{target.display_name}**\n\n"
             f"**Level: {lvl}** | **XP: {cx:,}/{nx:,}** | **Rank: #{rank}**\n\n"
             f"`{bar}` {pct}%\n\n"
             f"*Total XP: {data['xp']:,} | Messages: {data.get('messages', 0):,}*"
         ),
-        color=0x1DB954, timestamp=discord.utils.utcnow()
+        color=0xD97706, timestamp=discord.utils.utcnow()
     )
     embed.set_author(name="Rank Card", icon_url=target.display_avatar.url)
     embed.set_thumbnail(url=target.display_avatar.url)
@@ -5670,62 +5712,6 @@ async def slash_giveaway_list(i: discord.Interaction):
 bot.tree.add_command(giveaway_group)
 
 
-# ─────────────────────────────────────────────
-# TOP UP GAME SYSTEM
-# /topup       → embed + tombol link (semua user)
-# !Joy topup   → sama via prefix (semua user)
-# !Joy settopup → owner: set/edit link & embed
-# ─────────────────────────────────────────────
-
-def get_topup_data():
-    return cfg.setdefault("topup", {
-        "url":          "",
-        "title":        "🎮 Top Up Game",
-        "description":  "Top up game favoritmu dengan cepat, aman, dan harga terjangkau!",
-        "button_label": "Kunjungi Website",
-        "thumbnail":    "",
-    })
-
-def save_topup(data):
-    cfg["topup"] = data
-    save_config(cfg)
-
-def build_topup_embed():
-    d     = get_topup_data()
-    embed = discord.Embed(
-        title       = d.get("title", "🎮 Top Up Game"),
-        description = d.get("description", ""),
-        color       = EMBED_COLOR,
-        timestamp   = discord.utils.utcnow(),
-    )
-    embed.set_footer(text="JoyCannot Bot • Top Up Game")
-    thumb = d.get("thumbnail", "")
-    if thumb:
-        embed.set_thumbnail(url=thumb)
-    url = d.get("url", "").strip()
-    if url:
-        embed.add_field(name="🔗 Link", value=f"[{d.get('button_label','Kunjungi Website')}]({url})", inline=False)
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(
-            label  = d.get("button_label", "Kunjungi Website"),
-            url    = url,
-            style  = discord.ButtonStyle.link,
-            emoji  = "🛒",
-        ))
-    else:
-        embed.add_field(
-            name  = "⚠️ Belum dikonfigurasi",
-            value = "Owner belum mengatur link. Gunakan `!Joy settopup` untuk setup.",
-            inline=False
-        )
-        view = None
-    return embed, view
-
-
-@bot.tree.command(name="topup", description="Top Up Game — kunjungi website top up resmi kami.")
-async def slash_topup(i: discord.Interaction):
-    embed, view = build_topup_embed()
-    await i.response.send_message(embed=embed, view=view)
 
 
 if __name__ == "__main__":
