@@ -5260,3 +5260,16 @@ def build_topup_embed():
 async def slash_topup(i: discord.Interaction):
     embed, view = build_topup_embed()
     await i.response.send_message(embed=embed, view=view)
+
+
+if __name__ == "__main__":
+    token = os.getenv("DISCORD_TOKEN")
+    if not token:
+        raise RuntimeError("DISCORD_TOKEN is not set.")
+
+    async def main():
+        await start_vote_webhook()
+        await bot.start(token)
+
+    import asyncio as _asyncio
+    _asyncio.run(main())
