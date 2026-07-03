@@ -39,7 +39,169 @@ logging.basicConfig(level=logging.INFO)
 EMBED_COLOR = 0xD97706   # Dark orange
 BOT_PREFIX  = "!Joy "
 CONFIG_PATH = "data/config.json"
+EMOJI_CONFIG_PATH = "data/emoji_config.json"
 WIB         = pytz.timezone("Asia/Jakarta")
+
+# ─────────────────────────────────────────────
+# CUSTOM SERVER EMOJI SYSTEM
+# ─────────────────────────────────────────────
+# Semua emoji unicode bawaan bot (✅ ❌ 🎫 dst) otomatis diganti dengan
+# custom emoji server lu, SELAMA sudah diisi di data/emoji_config.json.
+# Kalau slot custom-nya kosong, bot otomatis fallback ke emoji unicode
+# biasa — jadi bot TETAP JALAN NORMAL walau file itu belum diisi sama
+# sekali. Tidak ada resiko bot rusak/crash karena config ini.
+#
+# Cara isi: buka data/emoji_config.json, isi field "custom" dengan
+# format emoji Discord: <:nama:ID>  (emoji biasa) atau <a:nama:ID>
+# (emoji animated). Contoh:
+#   "success": { "custom": "<:success:123456789012345678>", ... }
+#
+# Cara dapat ID emoji: ketik \:nama_emoji: di server lu (backslash di
+# depan emoji), Discord akan tampilkan bentuk mentahnya berisi ID-nya.
+
+_DEFAULT_EMOJI_CONFIG = {
+    "success": {"fallback": "✅"}, "error": {"fallback": "❌"},
+    "warning": {"fallback": "⚠️"}, "premium": {"fallback": "💎"},
+    "ticket": {"fallback": "🎫"}, "ballot": {"fallback": "🗳️"},
+    "clipboard": {"fallback": "📋"}, "pin": {"fallback": "📌"},
+    "party": {"fallback": "🎉"}, "hammer": {"fallback": "🔨"},
+    "lock": {"fallback": "🔒"}, "unlock": {"fallback": "🔓"},
+    "user": {"fallback": "👤"}, "users": {"fallback": "👥"},
+    "gift": {"fallback": "🎁"}, "star": {"fallback": "⭐"},
+    "announcement": {"fallback": "📢"}, "megaphone": {"fallback": "📣"},
+    "image": {"fallback": "🖼️"}, "confetti": {"fallback": "🎊"},
+    "chart": {"fallback": "📊"}, "clock": {"fallback": "🕐"},
+    "memo": {"fallback": "📝"}, "noentry": {"fallback": "🚫"},
+    "trophy": {"fallback": "🏆"}, "grin": {"fallback": "😁"},
+    "green_circle": {"fallback": "🟢"}, "red_circle": {"fallback": "🔴"},
+    "yellow_circle": {"fallback": "🟡"}, "white_circle": {"fallback": "⚪"},
+    "package": {"fallback": "📦"}, "link": {"fallback": "🔗"},
+    "paperclip": {"fallback": "📎"}, "sparkles": {"fallback": "✨"},
+    "mask": {"fallback": "🎭"}, "camera": {"fallback": "📷"},
+    "tag": {"fallback": "🏷️"}, "trash": {"fallback": "🗑️"},
+    "refresh": {"fallback": "🔄"}, "refresh2": {"fallback": "🔃"},
+    "mail_in": {"fallback": "📩"}, "shield": {"fallback": "🛡️"},
+    "calendar": {"fallback": "📅"}, "globe": {"fallback": "🌐"},
+    "arrow_up": {"fallback": "⬆️"}, "fire": {"fallback": "🔥"},
+    "card": {"fallback": "💳"}, "flag_checkered": {"fallback": "🏁"},
+    "plus": {"fallback": "➕"}, "bank": {"fallback": "🏦"},
+    "phone": {"fallback": "📱"}, "diamond_orange": {"fallback": "🔶"},
+    "diamond_small": {"fallback": "🔸"}, "medal": {"fallback": "🏅"},
+    "medal_gold": {"fallback": "🥇"}, "medal_silver": {"fallback": "🥈"},
+    "medal_bronze": {"fallback": "🥉"}, "wave": {"fallback": "👋"},
+    "speech": {"fallback": "💬"}, "siren": {"fallback": "🚨"},
+    "bolt": {"fallback": "⚡"}, "rocket": {"fallback": "🚀"},
+    "ping": {"fallback": "🏓"}, "folder": {"fallback": "📁"},
+    "home": {"fallback": "🏠"}, "thanks": {"fallback": "🙏"},
+    "crown": {"fallback": "👑"}, "wrench": {"fallback": "🔧"},
+    "radio": {"fallback": "🔘"}, "outbox": {"fallback": "📤"},
+    "pencil": {"fallback": "✏️"}, "bulb": {"fallback": "💡"},
+    "point_right": {"fallback": "👉"}, "target": {"fallback": "🎯"},
+    "numbers": {"fallback": "🔢"}, "sad": {"fallback": "😔"},
+    "ribbon": {"fallback": "🎗️"}, "tickets": {"fallback": "🎟️"},
+    "repeat": {"fallback": "🔁"}, "arrow_right": {"fallback": "→"},
+}
+
+def load_emoji_config() -> dict:
+    """Load data/emoji_config.json. Auto-creates it with empty 'custom'
+    slots on first run. Missing file / missing keys / bad JSON never
+    crash the bot — it always falls back to the unicode default."""
+    os.makedirs("data", exist_ok=True)
+    if not os.path.exists(EMOJI_CONFIG_PATH):
+        default = {
+            key: {"custom": "", "fallback": val["fallback"], "description": ""}
+            for key, val in _DEFAULT_EMOJI_CONFIG.items()
+        }
+        with open(EMOJI_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(default, f, ensure_ascii=False, indent=2)
+        return default
+    try:
+        with open(EMOJI_CONFIG_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        logging.warning("emoji_config.json tidak valid, pakai emoji default sementara.")
+        return {key: {"custom": "", "fallback": v["fallback"]} for key, v in _DEFAULT_EMOJI_CONFIG.items()}
+    # pastikan semua key ada, biar update bot ga bikin emoji baru hilang
+    changed = False
+    for key, val in _DEFAULT_EMOJI_CONFIG.items():
+        if key not in data:
+            data[key] = {"custom": "", "fallback": val["fallback"], "description": ""}
+            changed = True
+    if changed:
+        with open(EMOJI_CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    return data
+
+_EMOJI_CFG = load_emoji_config()
+
+# unicode-fallback -> resolved emoji (custom kalau diisi, else unicode asli)
+_EMOJI_TRANSLATE: dict[str, str] = {}
+for _key, _val in _EMOJI_CFG.items():
+    _custom   = (_val.get("custom") or "").strip()
+    _fallback = _val.get("fallback", "")
+    if _fallback:
+        _EMOJI_TRANSLATE[_fallback] = _custom if _custom else _fallback
+
+def E(name: str) -> str:
+    """Ambil emoji custom berdasarkan nama key (mis. E('success')).
+    Otomatis fallback ke emoji unicode kalau belum di-set di config."""
+    val = _EMOJI_CFG.get(name)
+    if not val:
+        return ""
+    custom = (val.get("custom") or "").strip()
+    return custom if custom else val.get("fallback", "")
+
+def translate_emojis(text) -> str:
+    """Ganti semua emoji unicode bawaan di sebuah string dengan custom
+    emoji server (kalau sudah dikonfigurasi). Aman dipanggil ke string
+    kosong / None / non-str — dikembalikan apa adanya."""
+    if not text or not isinstance(text, str):
+        return text
+    if not _EMOJI_TRANSLATE:
+        return text
+    for uni, custom in sorted(_EMOJI_TRANSLATE.items(), key=lambda kv: -len(kv[0])):
+        if custom != uni and uni in text:
+            text = text.replace(uni, custom)
+    return text
+
+def reload_emoji_config():
+    """Panggil ini kalau emoji_config.json diedit manual saat bot jalan,
+    biar ga perlu restart bot."""
+    global _EMOJI_CFG, _EMOJI_TRANSLATE
+    _EMOJI_CFG = load_emoji_config()
+    _EMOJI_TRANSLATE = {}
+    for _key, _val in _EMOJI_CFG.items():
+        _custom   = (_val.get("custom") or "").strip()
+        _fallback = _val.get("fallback", "")
+        if _fallback:
+            _EMOJI_TRANSLATE[_fallback] = _custom if _custom else _fallback
+
+# ── Monkeypatch discord.Embed supaya SEMUA embed di seluruh bot ──────
+# otomatis pakai custom emoji, tanpa perlu ubah tiap baris kode manual.
+# Ini 100% aman: kalau custom emoji belum diisi, hasilnya identik
+# dengan emoji unicode yang sudah ada sekarang (tidak ada perubahan).
+_OrigEmbed = discord.Embed
+
+class _EmojiAwareEmbed(_OrigEmbed):
+    def __init__(self, *args, **kwargs):
+        if "title" in kwargs:
+            kwargs["title"] = translate_emojis(kwargs["title"])
+        if "description" in kwargs:
+            kwargs["description"] = translate_emojis(kwargs["description"])
+        super().__init__(*args, **kwargs)
+
+    def add_field(self, *, name=None, value=None, inline=True):
+        return super().add_field(
+            name=translate_emojis(name), value=translate_emojis(value), inline=inline
+        )
+
+    def set_footer(self, *, text=None, icon_url=None):
+        return super().set_footer(text=translate_emojis(text), icon_url=icon_url)
+
+    def set_author(self, *, name=None, url=None, icon_url=None):
+        return super().set_author(name=translate_emojis(name), url=url, icon_url=icon_url)
+
+discord.Embed = _EmojiAwareEmbed
 
 # ─────────────────────────────────────────────
 # CONFIG MANAGER
@@ -67,8 +229,36 @@ def load_config() -> dict:
         }
         save_config(default)
         return default
-    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        # config.json korup (mis. gara-gara crash pas nulis dulu, sebelum
+        # ada atomic-write di atas). Backup file yang rusak biar ga hilang
+        # sama sekali, terus bikin default baru supaya bot tetap bisa nyala.
+        logging.exception("data/config.json korup, bikin backup & default baru")
+        try:
+            corrupt_backup = CONFIG_PATH + f".corrupt.{int(datetime.datetime.now().timestamp())}"
+            os.replace(CONFIG_PATH, corrupt_backup)
+        except OSError:
+            pass
+        data = {
+            "guilds": {},
+            "premium_packages": [],
+            "premium_commands": [],
+            "premium_users":    [],
+            "premium_guilds":   [],
+            "avatar_default":   "",
+            "avatar_premium":   "",
+            "vote_discount":    10,
+            "topgg_webhook_secret": "",
+            "votes": {},
+            "payment_methods": {
+                "qris":    {"enabled": True, "image_url": "", "info": ""},
+                "bank":    {"enabled": True, "bank_name": "", "account_number": "", "account_name": ""},
+                "ewallet": {"enabled": True, "type": "", "number": ""},
+            }
+        }
     # ── Migrate old boolean payment_methods → new dict format ──
     pm = data.get("payment_methods", {})
     if pm and isinstance(next(iter(pm.values()), None), bool):
@@ -113,9 +303,24 @@ def load_config() -> dict:
     return data
 
 def save_config(cfg: dict):
+    """Atomic write: tulis ke file sementara dulu baru rename ke config.json.
+    Ini mencegah config.json korup/kepotong kalau bot crash/restart pas
+    lagi nulis (bisa kejadian di Railway kalau deploy baru masuk)."""
     os.makedirs("data", exist_ok=True)
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
+    tmp_path = CONFIG_PATH + ".tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, CONFIG_PATH)
+    except Exception:
+        logging.exception("Gagal nyimpen config.json")
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
 def guild_cfg(cfg: dict, guild_id: int) -> dict:
     gid = str(guild_id)
@@ -132,7 +337,7 @@ def guild_cfg(cfg: dict, guild_id: int) -> dict:
                 "panels": []
             },
             "warnings": {},
-            "active_tickets": {},
+            "active_tickets": {},  # uid(str) → list[channel_id] — supports max_tickets > 1
             "spam_trap_channel": None,  # honeypot channel — siapapun kirim pesan = auto ban
             # ── Leveling & Quest ──────────────────────────────────────────
             "leveling_enabled": True,
@@ -435,6 +640,35 @@ bot = commands.Bot(
     tree_cls=JoyCommandTree,
 )
 
+# Lock global buat save_config(). Command-command Discord jalan
+# concurrent (async), jadi kalau dua command sama-sama load_config() ->
+# ubah -> save_config() nyaris bersamaan, salah satu perubahan bisa
+# ketimpa. Pakai lock ini di command yang critical (leveling/premium/
+# ticket state) lewat `async with config_lock:` biar aman.
+config_lock = asyncio.Lock()
+
+# ── Dirty-flag autosave ───────────────────────────────────────────────
+# XP naik hampir tiap orang chat — kalau save_config() (disk write,
+# blocking) dipanggil tiap pesan, itu berat banget buat server rame dan
+# bisa nge-block event loop bot. Solusinya: tandain config "dirty" aja,
+# terus ada task tiap beberapa detik yang nyimpen SEKALI kalau ada
+# perubahan. Data tetap ke-save rutin, gak keitung 1:1 per pesan lagi.
+_config_dirty = False
+
+def _mark_config_dirty():
+    global _config_dirty
+    _config_dirty = True
+
+@tasks.loop(seconds=15)
+async def _autosave_config_loop():
+    global _config_dirty
+    if _config_dirty:
+        _config_dirty = False
+        try:
+            save_config(cfg)
+        except Exception:
+            logging.exception("Autosave config gagal")
+
 # ─────────────────────────────────────────────
 # PREMIUM ACCESS HELPERS
 # ─────────────────────────────────────────────
@@ -460,8 +694,8 @@ def user_has_premium(guild: Optional[discord.Guild], user: discord.abc.User) -> 
                     cfg["premium_expiry"].pop(uid, None)
                     save_config(cfg)
                     return False
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Ignored exception: {e}", exc_info=True)
         return True
     if guild and guild.id in cfg.get("premium_guilds", []):
         return True
@@ -482,8 +716,8 @@ async def check_premium_expiry():
                 cfg["premium_users"] = [u for u in cfg.get("premium_users", []) if u != uid]
                 expiry_map.pop(uid_str, None)
                 revoked.append(uid)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
     if revoked:
         save_config(cfg)
         logging.info(f"[Premium Expiry] Revoked {len(revoked)} expired: {revoked}")
@@ -520,8 +754,8 @@ async def set_guild_premium_nick(guild: discord.Guild, activate: bool):
             try:
                 top_pos = max((r.position for r in me.roles if r.managed), default=1)
                 await role.edit(position=max(top_pos - 1, 1))
-            except Exception:
-                pass   # Position edit may fail in some configs — not critical
+            except Exception as e:
+                logging.debug(f"Ignored exception: {e}", exc_info=True)   # Position edit may fail in some configs — not critical
 
             # ── Assign role to bot if not already ─────────────────────────
             if role not in me.roles:
@@ -539,8 +773,8 @@ async def set_guild_premium_nick(guild: discord.Guild, activate: bool):
                     await me.remove_roles(role, reason="JoyCannot Premium deactivation")
                 try:
                     await role.delete(reason="JoyCannot Premium deactivation")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.debug(f"Ignored exception: {e}", exc_info=True)
 
             # ── Reset nickname ─────────────────────────────────────────────
             await me.edit(nick=None)
@@ -759,6 +993,27 @@ async def on_ready():
     rotate_status.start()
     if not premium_expiry_task.is_running():
         premium_expiry_task.start()
+    if not _autosave_config_loop.is_running():
+        _autosave_config_loop.start()
+
+    # ── Restore active giveaways that survived a restart ──
+    global active_giveaways
+    active_giveaways = load_giveaways()
+    now_ts = discord.utils.utcnow().timestamp()
+    for gw in list(active_giveaways.values()):
+        remaining = gw.get("ends_ts", now_ts) - now_ts
+        if remaining <= 0:
+            # Udah lewat waktu abis pas bot mati — langsung end sekarang
+            asyncio.create_task(end_giveaway(gw))
+        else:
+            async def _resume_timer(gw=gw, remaining=remaining):
+                await asyncio.sleep(remaining)
+                if gw["message_id"] in active_giveaways:
+                    await end_giveaway(active_giveaways[gw["message_id"]])
+            asyncio.create_task(_resume_timer())
+    if active_giveaways:
+        print(f"[JoyCannot] Restored {len(active_giveaways)} active giveaway(s).")
+
     print(f"[JoyCannot] Ready — {len(bot.guilds)} guild(s).")
 
     # ── Restore premium nicknames for all activated guilds ──
@@ -846,8 +1101,8 @@ async def on_message(message: discord.Message):
             # Hapus pesannya dulu
             try:
                 await message.delete()
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Ignored exception: {e}", exc_info=True)
             # Auto ban
             banned = False
             try:
@@ -884,8 +1139,8 @@ async def on_message(message: discord.Message):
                     log_embed.set_footer(text="JoyCannot Honeypot System")
                     try:
                         await log_ch.send(embed=log_embed)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logging.debug(f"Ignored exception: {e}", exc_info=True)
             return  # stop processing, jangan lanjut ke prefix/XP/dll
 
     # ── Anti cross-channel spam ───────────────────────────────────────────
@@ -1008,8 +1263,8 @@ async def on_message(message: discord.Message):
                             log_embed.set_footer(text="JoyCannot Anti-Spam System")
                             try:
                                 await log_ch.send(embed=log_embed)
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logging.debug(f"Ignored exception: {e}", exc_info=True)
 
                     spam_tracker.pop(uid, None)
                     return
@@ -1053,6 +1308,18 @@ async def on_message(message: discord.Message):
         # Quest: track every message regardless of XP cooldown
         if gc.get("leveling_enabled", True):
             await update_quest_progress(gc, uid, "send_messages", 1)
+
+            # "days_active" quest type: dulu didefinisikan di QUEST_TYPES
+            # tapi TIDAK ADA yang manggil update_quest_progress dengan tipe
+            # ini di mana pun — jadi quest jenis ini gak akan pernah maju
+            # progress-nya sama sekali walau admin bikin quest-nya.
+            # Fix: catat tanggal terakhir user aktif (WIB), dan kalau hari
+            # ini beda dari terakhir kali, hitung sebagai 1 hari aktif.
+            today_wib = datetime.datetime.now(WIB).strftime("%Y-%m-%d")
+            last_active = gc.setdefault("member_last_active", {})
+            if last_active.get(uid) != today_wib:
+                last_active[uid] = today_wib
+                await update_quest_progress(gc, uid, "days_active", 1)
 
         # XP: respects cooldown
         leveled_up, new_level = await process_xp_gain(message)
@@ -1140,7 +1407,7 @@ async def process_xp_gain(message: discord.Message):
     data["messages"]    += 1
     new_level = level_from_xp(data["xp"])
     data["level"] = new_level
-    save_config(cfg)
+    _mark_config_dirty()
 
     if new_level > old_level:
         return True, new_level
@@ -1356,19 +1623,19 @@ async def _complete_quest(gc: dict, uid: str, quest: dict):
                 await interaction.response.send_message(embed=reward_embed, ephemeral=True)
                 try:
                     await interaction.message.delete()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.debug(f"Ignored exception: {e}", exc_info=True)
 
         view = ClaimRewardView(member.id, reward_text, quest["name"])
         try:
             await quest_ch.send(embed=public_embed, view=view)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
     else:
         try:
             await quest_ch.send(embed=public_embed)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
 
 
 # ─────────────────────────────────────────────
@@ -1419,8 +1686,8 @@ async def rotate_status():
     _status_index += 1
     try:
         await bot.change_presence(status=discord.Status.online, activity=activity)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug(f"Ignored exception: {e}", exc_info=True)
 
 # ─────────────────────────────────────────────
 # ══════════════════════════════════════════
@@ -1473,8 +1740,8 @@ async def do_warn(guild, author, member, reason, reply_fn):
     try:
         await member.send(embed=base_embed("⚠️ You have been warned",
             f"**Server:** {guild.name}\n**Reason:** {reason}"))
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug(f"Ignored exception: {e}", exc_info=True)
 
 async def do_addrole(guild, author, member, role, reply_fn):
     if not author.guild_permissions.manage_roles:
@@ -1980,8 +2247,8 @@ async def slash_ticket_panel(
 @ticket_group.command(name="close", description="Close this ticket. You'll be asked for a reason (required).")
 async def slash_ticket_close(i: discord.Interaction):
     gc = guild_cfg(cfg, i.guild.id)
-    for uid, ch_id in list(gc["active_tickets"].items()):
-        if ch_id == i.channel.id:
+    for uid, ch_ids in list(gc["active_tickets"].items()):
+        if i.channel.id in ch_ids:
             if not (i.user.guild_permissions.manage_channels or str(i.user.id) == uid):
                 return await i.response.send_message(embed=error_embed("You cannot close this ticket."), ephemeral=True)
             return await i.response.send_modal(TicketCloseModal(uid))
@@ -2038,17 +2305,23 @@ class TicketCloseModal(discord.ui.Modal, title="🔒 Close Ticket"):
                     log_embed.add_field(name="👤 Opened by", value=opener.mention, inline=True)
                 try:
                     await log_ch.send(embed=log_embed)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.debug(f"Ignored exception: {e}", exc_info=True)
 
         await asyncio.sleep(5)
-        if self.opener_uid in gc["active_tickets"]:
-            del gc["active_tickets"][self.opener_uid]
+        closed_ch_id = i.channel.id
+        user_list = gc["active_tickets"].get(self.opener_uid, [])
+        if closed_ch_id in user_list:
+            user_list.remove(closed_ch_id)
+            if user_list:
+                gc["active_tickets"][self.opener_uid] = user_list
+            else:
+                gc["active_tickets"].pop(self.opener_uid, None)
             save_config(cfg)
         try:
             await i.channel.delete(reason=f"Ticket closed by {i.user} — {reason_text}")
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
 
 
 async def handle_open_ticket(i: discord.Interaction):
@@ -2057,8 +2330,8 @@ async def handle_open_ticket(i: discord.Interaction):
 
     # ── Max tickets check ─────────────────────────────────────────────────
     max_tickets = gc["ticket"].get("max_tickets", 1)
-    user_tickets = [ch_id for u, ch_id in gc["active_tickets"].items()
-                    if u == uid and i.guild.get_channel(ch_id)]
+    user_ch_ids = gc["active_tickets"].get(uid, [])
+    user_tickets = [ch_id for ch_id in user_ch_ids if i.guild.get_channel(ch_id)]
     if len(user_tickets) >= max_tickets:
         if max_tickets == 1:
             existing_ch = i.guild.get_channel(user_tickets[0])
@@ -2071,11 +2344,13 @@ async def handle_open_ticket(i: discord.Interaction):
             "🎫 Ticket Limit Reached", msg, color=0xF59E0B), ephemeral=True)
 
     # Clean up stale ticket records where channel no longer exists
-    stale = [u for u, ch_id in gc["active_tickets"].items()
-             if u == uid and not i.guild.get_channel(ch_id)]
-    for u in stale:
-        del gc["active_tickets"][u]
-    if stale:
+    stale_ch_ids = [ch_id for ch_id in user_ch_ids if not i.guild.get_channel(ch_id)]
+    if stale_ch_ids:
+        remaining = [ch_id for ch_id in user_ch_ids if ch_id not in stale_ch_ids]
+        if remaining:
+            gc["active_tickets"][uid] = remaining
+        else:
+            gc["active_tickets"].pop(uid, None)
         save_config(cfg)
 
     category = i.guild.get_channel(gc["ticket"].get("category"))
@@ -2084,7 +2359,8 @@ async def handle_open_ticket(i: discord.Interaction):
             "❌ Ticket category not configured.\nAsk an admin to run `/ticket setup` first."), ephemeral=True)
 
     safe = re.sub(r"[^a-z0-9]", "", i.user.name.lower()) or "user"
-    ticket_num = len(gc["active_tickets"]) + 1
+    ticket_num = gc["ticket"].get("ticket_counter", 0) + 1
+    gc["ticket"]["ticket_counter"] = ticket_num
 
     # ── Build permission overwrites ───────────────────────────────────────
     ovw = {
@@ -2104,7 +2380,7 @@ async def handle_open_ticket(i: discord.Interaction):
         overwrites=ovw,
         topic=f"Ticket opened by {i.user} ({i.user.id})"
     )
-    gc["active_tickets"][uid] = ch.id
+    gc["active_tickets"].setdefault(uid, []).append(ch.id)
     save_config(cfg)
 
     await i.response.send_message(
@@ -2137,7 +2413,7 @@ async def handle_open_ticket(i: discord.Interaction):
             # Find opener uid
             inner = guild_cfg(cfg, interaction.guild.id)
             opener_uid = next(
-                (k for k, v in inner["active_tickets"].items() if v == interaction.channel.id), uid)
+                (k for k, v in inner["active_tickets"].items() if interaction.channel.id in v), uid)
             await interaction.response.send_modal(TicketCloseModal(opener_uid))
 
     welcome = discord.Embed(
@@ -2174,8 +2450,8 @@ async def handle_open_ticket(i: discord.Interaction):
                 value=discord.utils.format_dt(discord.utils.utcnow(), "f"), inline=False)
             try:
                 await log_ch.send(embed=log_embed)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Ignored exception: {e}", exc_info=True)
 
 # ── PREMIUM (slash) ───────────────────────────
 
@@ -2326,8 +2602,8 @@ async def slash_premium_order(i: discord.Interaction, package_name: str, payment
                 await dm_channel.send(embed=error_embed(
                     "⏰ Waktu habis! Order kamu dibatalkan karena bukti pembayaran tidak diterima dalam 15 menit.\n"
                     "Silakan `/premium order` lagi jika masih ingin berlangganan."))
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Ignored exception: {e}", exc_info=True)
             return
 
         pending_proofs.pop(i.user.id, None)
@@ -2369,16 +2645,16 @@ async def slash_premium_order(i: discord.Interaction, package_name: str, payment
                     await owner.send(
                         content=f"📎 **Bukti pembayaran dari {i.user}:**",
                         file=await att.to_file())
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Ignored exception: {e}", exc_info=True)
 
         try:
             await dm_channel.send(embed=success_embed(
                 "✅ Bukti pembayaran kamu sudah diterima!\n"
                 "Tim kami akan memverifikasi dan mengaktifkan premium sesegera mungkin.\n"
                 "Terima kasih! 🙏"))
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
 
     asyncio.create_task(wait_for_proof())
 
@@ -2499,8 +2775,8 @@ async def slash_event_create(
                     remind = base_embed(f"⏰ Starting in 5 minutes — {title}",
                         f"**{name}** begins {discord.utils.format_dt(dt_utc, 'R')}!", color=0xF59E0B)
                     await announce_ch.send("@everyone", embed=remind)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.debug(f"Ignored exception: {e}", exc_info=True)
                 # Wait remaining 5 min
                 await asyncio.sleep(min(300, (dt_utc - discord.utils.utcnow()).total_seconds()))
             else:
@@ -2511,8 +2787,8 @@ async def slash_event_create(
             await msg.edit(embed=make_live_embed())
             await announce_ch.send("@everyone", embed=base_embed(
                 f"🟢 {title} is now LIVE!", f"**{name}** has started!", color=0x22C55E))
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
 
         # Wait duration
         await asyncio.sleep(dur_secs)
@@ -2522,8 +2798,8 @@ async def slash_event_create(
             await msg.edit(embed=make_ended_embed())
             await announce_ch.send(embed=base_embed(
                 f"🔴 {title} has ended.", f"Thank you for joining **{name}**!", color=0xEF4444))
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
 
     asyncio.create_task(event_lifecycle())
 
@@ -2628,8 +2904,8 @@ async def pfx_purge(ctx: commands.Context, amount: int = 10):
     await asyncio.sleep(4)
     try:
         await msg.delete()
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug(f"Ignored exception: {e}", exc_info=True)
 
 @bot.command(name="lock")
 async def pfx_lock(ctx: commands.Context, channel: discord.TextChannel = None):
@@ -2824,21 +3100,25 @@ async def pfx_ticket(ctx: commands.Context, sub: str = "", *args):
         await ctx.send(embed=panel_embed, view=TicketPanelView())
 
     elif sub == "close":
-        for uid, ch_id in list(gc["active_tickets"].items()):
-            if ch_id == ctx.channel.id:
+        for uid, ch_ids in list(gc["active_tickets"].items()):
+            if ctx.channel.id in ch_ids:
                 if not (ctx.author.guild_permissions.manage_channels or str(ctx.author.id) == uid):
                     return await ctx.send(embed=error_embed("Kamu tidak bisa menutup ticket ini."))
                 reason_txt = " ".join(args) if args else "Closed via prefix command."
                 await ctx.send(embed=base_embed("Ticket Closing",
                     f"Ditutup oleh {ctx.author.mention}.\nAlasan: {reason_txt}\n\nChannel dihapus dalam 5 detik.",
                     color=0xEF4444))
-                del gc["active_tickets"][uid]
+                ch_ids.remove(ctx.channel.id)
+                if ch_ids:
+                    gc["active_tickets"][uid] = ch_ids
+                else:
+                    gc["active_tickets"].pop(uid, None)
                 save_config(cfg)
                 await asyncio.sleep(5)
                 try:
                     await ctx.channel.delete(reason="Ticket closed")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.debug(f"Ignored exception: {e}", exc_info=True)
                 return
         await ctx.send(embed=error_embed("Channel ini bukan ticket aktif."))
     else:
@@ -2896,8 +3176,8 @@ async def pfx_rank(ctx: commands.Context, member: discord.Member = None):
                         embed.set_image(url="attachment://rank.png")
                         embed.set_footer(text=f"Total XP: {data['xp']:,} · Messages: {data.get('messages',0):,} · {ctx.guild.name}")
                         return await ctx.send(file=file, embed=embed)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
 
     # ── Fallback: embed teks kalau API gagal ─────────────────────────────
     bar  = "▰" * int(pct / 100 * 16) + "▱" * (16 - int(pct / 100 * 16))
@@ -2940,8 +3220,8 @@ async def pfx_level(ctx: commands.Context, sub: str = "", *args):
         if args:
             try:
                 m = ctx.guild.get_member(int(args[0].strip("<@!>")))
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Ignored exception: {e}", exc_info=True)
         await pfx_rank(ctx, m)
     elif sub == "leaderboard":
         await pfx_leaderboard(ctx)
@@ -3153,6 +3433,7 @@ async def pfx_giveaway(ctx: commands.Context, sub: str = "", *args):
             return await ctx.send(embed=error_embed("Bot tidak bisa kirim pesan di channel ini."))
         gw["message_id"] = msg.id
         active_giveaways[msg.id] = gw
+        save_giveaways()
 
         async def _timer():
             await asyncio.sleep(dur_secs)
@@ -3244,8 +3525,8 @@ async def pfx_noprefix(ctx: commands.Context, action: str = "", *, target: str =
                     "Cukup ketik nama command langsung: `kick @user`, `ban @user`, `help`\n"
                     "Fitur eksklusif premium — bisa dicabut kapan saja.", color=0x22C55E)
                 await user.send(embed=dm)
-            except Exception:
-                pass
+            except Exception as e:
+                logging.debug(f"Ignored exception: {e}", exc_info=True)
             await ctx.send(embed=success_embed(
                 f"No-prefix diaktifkan untuk {user.mention} (`{parsed_id}`).\n"
                 "Mereka bisa jalankan command tanpa prefix di server manapun."))
@@ -3413,8 +3694,8 @@ class NoPreFixGrantModal(discord.ui.Modal, title="Grant No-Prefix Access"):
                         "Cukup ketik nama command langsung: `kick @user`, `ban @user`, `help`\n"
                         "*Fitur eksklusif premium — bisa dicabut kapan saja.*", color=0x22C55E)
                     await user.send(embed=dm)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.debug(f"Ignored exception: {e}", exc_info=True)
                 await i.response.send_message(embed=success_embed(f"No-prefix diaktifkan untuk {user.mention}."), ephemeral=True)
             else:
                 if pid in np_users: np_users.remove(pid)
@@ -4318,8 +4599,8 @@ async def pfx_botrole(ctx: commands.Context, action: str = "", member: discord.M
                 color=badge_info["color"]
             )
             await member.send(embed=dm)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
         await ctx.send(embed=embed)
 
     elif action == "remove":
@@ -4367,8 +4648,8 @@ async def pfx_grantpremium(ctx: commands.Context, member: discord.Member = None,
                 description="Premium JoyCannot kamu telah berakhir.\nHubungi owner untuk perpanjang.",
                 color=0xEF4444)
             await member.send(embed=dm)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
         return await ctx.send(embed=success_embed(f"Premium dicabut dari {member.mention}."))
 
     # Parse durasi
@@ -4419,8 +4700,8 @@ async def pfx_grantpremium(ctx: commands.Context, member: discord.Member = None,
             color=0xF59E0B
         )
         await member.send(embed=dm)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug(f"Ignored exception: {e}", exc_info=True)
 
     await ctx.send(embed=embed)
 
@@ -4432,15 +4713,26 @@ async def pfx_grantpremium(ctx: commands.Context, member: discord.Member = None,
 
 @bot.tree.error
 async def on_app_command_error(i: discord.Interaction, error: app_commands.AppCommandError):
-    msg = (
-        t(cfg, i.guild.id if i.guild else 0, "no_perm") if isinstance(error, app_commands.MissingPermissions)
-        else f"⏱️ Slow down! Retry in {error.retry_after:.1f}s." if isinstance(error, app_commands.CommandOnCooldown)
-        else f"Unexpected error: `{error}`"
-    )
+    if isinstance(error, app_commands.MissingPermissions):
+        msg = t(cfg, i.guild.id if i.guild else 0, "no_perm")
+    elif isinstance(error, app_commands.CommandOnCooldown):
+        msg = f"⏱️ Slow down! Retry in {error.retry_after:.1f}s."
+    elif isinstance(error, app_commands.CheckFailure):
+        msg = "❌ You don't have permission to use this command."
+    else:
+        # Jangan bocorin isi exception mentah ke user (bisa aja nyebut
+        # path file / detail internal). Log full traceback di server,
+        # user cuma liat pesan aman.
+        cmd_name = i.command.qualified_name if i.command else "unknown"
+        logging.exception(f"Unhandled app command error in /{cmd_name}", exc_info=error)
+        msg = "❌ Something went wrong while running this command. The issue has been logged."
     try:
-        await i.response.send_message(embed=error_embed(msg), ephemeral=True)
+        if i.response.is_done():
+            await i.followup.send(embed=error_embed(msg), ephemeral=True)
+        else:
+            await i.response.send_message(embed=error_embed(msg), ephemeral=True)
     except Exception:
-        await i.followup.send(embed=error_embed(msg), ephemeral=True)
+        logging.exception("Gagal ngirim error message ke user")
 
 @bot.event
 async def on_command_error(ctx: commands.Context, error: commands.CommandError):
@@ -4566,8 +4858,8 @@ async def start_vote_webhook():
                 color=0x22C55E
             )
             await user_obj.send(embed=dm_embed)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
         return web.Response(status=200, text="OK")
 
     # ── API: STATUS ───────────────────────────────────────────────────────
@@ -4923,8 +5215,8 @@ def get_vote_discount(user_id: int) -> int:
         elapsed  = (datetime.datetime.utcnow() - voted_at).total_seconds() / 3600
         if elapsed <= VOTE_COOLDOWN_HOURS:
             return cfg.get("vote_discount", 10)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug(f"Ignored exception: {e}", exc_info=True)
     return 0
 
 
@@ -5370,7 +5662,39 @@ async def slash_leaderboard(i: discord.Interaction):
 # ─────────────────────────────────────────────
 
 # active_giveaways: message_id → giveaway data dict
+#
+# CATATAN PENTING: dict ini sebelumnya cuma di RAM — kalau Railway
+# restart/redeploy bot (yang emang sering kejadian tiap kali push kode
+# baru), SEMUA giveaway yang lagi jalan hilang dari ingatan bot padahal
+# pesannya masih ada di Discord. Akibatnya giveaway itu ga akan pernah
+# auto-end, dan /giveaway end atau reroll bakal bilang "not found".
+# Sekarang di-persist ke data/giveaways.json dan di-reload pas startup.
+GIVEAWAYS_PATH = "data/giveaways.json"
 active_giveaways: dict[int, dict] = {}
+
+def save_giveaways():
+    os.makedirs("data", exist_ok=True)
+    tmp_path = GIVEAWAYS_PATH + ".tmp"
+    try:
+        serializable = {str(mid): gw for mid, gw in active_giveaways.items()}
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(serializable, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, GIVEAWAYS_PATH)
+    except Exception:
+        logging.exception("Gagal nyimpen giveaways.json")
+
+def load_giveaways() -> dict[int, dict]:
+    if not os.path.exists(GIVEAWAYS_PATH):
+        return {}
+    try:
+        with open(GIVEAWAYS_PATH, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+        return {int(mid): gw for mid, gw in raw.items()}
+    except (json.JSONDecodeError, OSError, ValueError):
+        logging.exception("data/giveaways.json korup, mulai dari kosong")
+        return {}
 
 
 def build_giveaway_embed(gw: dict, ended: bool = False) -> discord.Embed:
@@ -5443,6 +5767,7 @@ async def end_giveaway(gw: dict):
     channel = bot.get_channel(gw["channel_id"])
     if not channel:
         active_giveaways.pop(gw["message_id"], None)
+        save_giveaways()
         return
 
     try:
@@ -5474,6 +5799,7 @@ async def end_giveaway(gw: dict):
                 break
     except (discord.NotFound, discord.Forbidden):
         active_giveaways.pop(gw["message_id"], None)
+        save_giveaways()
         return
 
     winners = await pick_winners(gw)
@@ -5483,8 +5809,8 @@ async def end_giveaway(gw: dict):
     # Edit original embed to ended state
     try:
         await msg.edit(embed=build_giveaway_embed(gw, ended=True), view=None)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.debug(f"Ignored exception: {e}", exc_info=True)
 
     # Announce winners — tag them in content for notification
     if winners:
@@ -5502,15 +5828,16 @@ async def end_giveaway(gw: dict):
         win_embed.set_footer(text="JoyCannot Giveaway System")
         try:
             await channel.send(content=winner_str, embed=win_embed)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
     else:
         try:
             await channel.send(embed=info_embed("🎊 Giveaway Ended", f"No valid entries for **{gw['prize']}**."))
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug(f"Ignored exception: {e}", exc_info=True)
 
     active_giveaways.pop(gw["message_id"], None)
+    save_giveaways()
 
 
 giveaway_group = app_commands.Group(name="giveaway", description="Create and manage giveaways.")
