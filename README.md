@@ -1,36 +1,45 @@
-# 🤖 JoyCannot Discord Bot
+🤖 JOY CANNOT — Discord Bot
+===========================
 
 > A professional, production-ready multi-purpose Discord bot built with `discord.py 2.x`.
 
 ---
 
-## ✨ Features
+✨ Features
+-----------
 
 | System | Description |
-|--------|-------------|
-| 🛡️ Moderation | kick, ban, timeout, warn, addrole, removerole, move, userinfo, avatar, addemoji, ping, help |
-| 🎫 Ticket System | Panel + button, per-guild config, whitelist roles, auto naming |
-| 📅 Event Announcements | Slash command, WIB timezone, duration support, auto @everyone + 5-min reminder |
-| 📢 Maintenance Broadcast | Owner-only prefix command, sends embed+button to ALL guilds |
-| 🌐 Language System | 8 languages: EN, ID, DE, AR, TH, VI, JA, KO |
-| 💎 Premium System | Packages, payment methods (QRIS/Bank/E-wallet), DM order notification |
-| 👋 Welcome System | Auto embed on guild join with channel picker |
-| 🚫 Anti Cross-Channel Spam | Detects same message across 3+ channels → instant ban |
+|---|---|
+| 🛡️ Moderation | `kick`, `ban`, `unban`, `timeout`, `untimeout`, `warn`, `warnings`, `unwarn`, `clearwarnings`, `purge`, `lock`, `unlock`, `slowmode` |
+| 🎭 Role & Voice | `addrole`, `removerole`, `move` |
+| ℹ️ Info | `userinfo`, `serverinfo`, `avatar`, `ping`, `addemoji`, `profile` |
+| 🎫 Ticket System | Panel with custom title + description, per-ticket dedicated log channel (auto-created and archived on close), configurable support role & max tickets per user |
+| 📅 Scheduled Event | Creates a native Discord Scheduled Event and posts an announcement embed to a normal text channel — works via prefix (`event create`) or `/createvent` |
+| 🎉 Giveaway | `giveaway start/end/reroll/list` with optional required role & winner role |
+| 🚫 Antispam | Honeypot channel that auto-bans anyone who posts in it, cross-channel spam detection, dedicated mod-log channel |
+| 💎 Premium System | Owner can lock/unlock specific commands to Premium-only, grant premium with auto-expiry (`grantpremium @user 7d/30d/permanent`), premium users get no-prefix access automatically |
+| 🚨 Maintenance Mode | Owner-only switch that locks every command for everyone except the owner while the bot is under maintenance |
+| ✨ No-Prefix | Owner, whitelisted users/guilds, and Premium users can run commands without typing the prefix |
+| 🏅 Profile & Badges | Founder/Developer/Management/Staff/Premium/No-Prefix/User badges, command-usage counter, badge auto-granted on joining the support server |
+| 💬 Mention as Prefix | Tagging the bot (`@JOY CANNOT`) alone shows a quick help hint; tagging it followed by a command (`@JOY CANNOT ban @user`) runs that command directly |
+| 🎛️ Interactive Help | `!joy help` / `/help` opens a category-based menu (dropdown + Home button); the Owner Only category is completely hidden from non-owners |
 
 ---
 
-## 🛠️ Setup
+🛠️ Setup
+---------
 
 ### 1. Prerequisites
 
 - Python `3.11+`
 - A Discord bot application ([Discord Developer Portal](https://discord.com/developers/applications))
+  - **Privileged Gateway Intents** required: `SERVER MEMBERS INTENT` and `MESSAGE CONTENT INTENT`
 
 ### 2. Clone the repo
 
 ```bash
-git clone https://github.com/yourname/joycannot-bot.git
-cd joycannot-bot
+git clone https://github.com/Nikoliesamphink/joyBoy.git
+cd joyBoy
 ```
 
 ### 3. Install dependencies
@@ -41,30 +50,27 @@ pip install -r requirements.txt
 
 ### 4. Configure environment variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (or set these directly in your host, e.g. Railway → Variables):
 
-```env
+```
 DISCORD_TOKEN=your_bot_token_here
 OWNER_ID=your_discord_user_id_here
+SUPPORT_SERVER_ID=your_support_server_id_here
+SUPPORT_INVITE=https://discord.gg/your_invite_code
 ```
 
-Or set these as Railway environment variables (see Railway Deploy section).
+| Variable | Required | Description |
+|---|---|---|
+| `DISCORD_TOKEN` | ✅ | Your bot's token from the Developer Portal |
+| `OWNER_ID` | ✅ | Your Discord user ID — grants Founder rank + full owner-only command access |
+| `SUPPORT_SERVER_ID` | Optional | Guild ID of your support server — members who join it automatically get the **USER** badge |
+| `SUPPORT_INVITE` | Optional | Invite link shown on the profile card and the help menu's Support Server button |
 
-### 5. Required Bot Permissions
+### 5. Configure emojis (optional)
 
-Enable these in the Discord Developer Portal under **Bot → Privileged Gateway Intents**:
+Edit `emoji_config.py` and fill in the custom emoji IDs for badges/icons used across embeds. Leave blank to fall back to defaults.
 
-- ✅ **Server Members Intent**
-- ✅ **Message Content Intent**
-
-Invite URL scopes:
-- `bot`
-- `applications.commands`
-
-Recommended permission integer: `8` (Administrator) — or use fine-grained permissions:  
-`Kick Members`, `Ban Members`, `Moderate Members`, `Manage Roles`, `Manage Channels`, `Manage Emojis`, `Move Members`
-
-### 6. Run locally
+### 6. Run the bot
 
 ```bash
 python bot.py
@@ -72,142 +78,32 @@ python bot.py
 
 ---
 
-## 🚀 Deploy on Railway
+📌 Prefix
+---------
 
-1. **Push to GitHub** — make sure all files are committed.
-
-2. **Create a new Railway project**  
-   Go to [railway.app](https://railway.app) → New Project → Deploy from GitHub Repo
-
-3. **Connect your repository**
-
-4. **Set Environment Variables** in Railway Dashboard → Variables:
-
-   | Key | Value |
-   |-----|-------|
-   | `DISCORD_TOKEN` | Your bot token |
-   | `OWNER_ID` | Your Discord user ID |
-
-5. **Verify the Procfile** is present:
-   ```
-   worker: python bot.py
-   ```
-
-6. Railway will auto-detect `requirements.txt` and install dependencies.
-
-7. **Deploy** — Railway will start the bot automatically.
-
-> ⚠️ Make sure to use **Worker** type (not Web). Railway runs the `worker` Procfile entry.
+- **`!joy`** (main) or **`!j`** (short alias)
+- Owner, Premium users, and anyone whitelisted with `noprefix` can run commands without typing the prefix at all.
+- Tagging the bot also works as a prefix: `@JOY CANNOT profile`.
 
 ---
 
-## 📁 Project Structure
+👑 Owner-Only Commands
+-----------------------
 
-```
-joycannot-bot/
-├── bot.py              # Main bot file (all systems included)
-├── requirements.txt    # Python dependencies
-├── Procfile            # Railway process definition
-├── README.md           # This file
-├── qris.png            # QRIS payment image (replace with yours)
-└── data/
-    └── config.json     # Auto-generated guild configuration storage
-```
+These are never shown to anyone else in `help`, on prefix or slash:
 
----
-
-## 📖 Command Reference
-
-### Slash Commands (`/`)
-
-#### Moderation
-| Command | Description | Permission |
-|---------|-------------|------------|
-| `/kick @member [reason]` | Kick a member | Kick Members |
-| `/ban @member [reason]` | Ban a member | Ban Members |
-| `/timeout @member <minutes> [reason]` | Timeout a member | Moderate Members |
-| `/warn @member [reason]` | Warn a member | Manage Messages |
-| `/addrole @member @role` | Add a role | Manage Roles |
-| `/removerole @member @role` | Remove a role | Manage Roles |
-| `/move @member #channel` | Move to voice channel | Move Members |
-| `/userinfo [@member]` | Show user info | Everyone |
-| `/avatar [@member]` | Show user avatar | Everyone |
-| `/addemoji <name> <url>` | Add emoji from URL | Manage Emojis |
-| `/ping` | Show bot latency | Everyone |
-| `/help` | Show command list | Everyone |
-
-#### Tickets
-| Command | Description | Permission |
-|---------|-------------|------------|
-| `/ticket setup` | Configure ticket system | Manage Guild |
-| `/ticket panel` | Send ticket panel embed | Manage Guild |
-| `/ticket close` | Close current ticket | Manage Channels / Ticket Owner |
-
-#### Events
-| Command | Description | Permission |
-|---------|-------------|------------|
-| `/event create` | Create and announce event | Manage Guild |
-| `/event channel #channel` | Set announce channel | Manage Guild |
-
-#### Language
-| Command | Description | Permission |
-|---------|-------------|------------|
-| `/language set <code>` | Set language | Manage Guild |
-| `/language list` | List all languages | Everyone |
-
-#### Premium
-| Command | Description | Permission |
-|---------|-------------|------------|
-| `/premium info` | View premium packages | Everyone |
-| `/premium order <package> <payment>` | Order a package | Everyone |
+- `maintenance on/off/status`
+- `noprefix grant/revoke/list`
+- `botrole set/remove/list`
+- `grantpremium @user <duration>/revoke`
+- `premiumlock add/remove/list <command>`
+- `syncsupport`
+- `blacklist add/remove/list`
+- `vxleave <guild_id>`
 
 ---
 
-### Prefix Commands (`!Joy `) — Owner Only
+📄 License
+----------
 
-| Command | Description |
-|---------|-------------|
-| `!Joy maintenance <title> \| <desc> \| <btn_label> \| <btn_url>` | Broadcast maintenance to all servers |
-| `!Joy premium list` | List all premium packages |
-| `!Joy premium add <n> \| <dur> \| <type> \| <price>` | Add a premium package |
-| `!Joy premium remove <name>` | Remove a premium package |
-| `!Joy premium payment <qris\|bank\|ewallet> <on\|off>` | Toggle payment methods |
-| `!Joy setchannel <guild_id> <channel_id>` | Set main channel for a guild |
-
----
-
-## 🌐 Supported Languages
-
-| Code | Language |
-|------|----------|
-| `en` | English (default) |
-| `id` | Indonesian |
-| `de` | German |
-| `ar` | Arabic |
-| `th` | Thai |
-| `vi` | Vietnamese |
-| `ja` | Japanese |
-| `ko` | Korean |
-
----
-
-## 🔒 Anti Cross-Channel Spam
-
-The bot monitors messages in real-time. If the **same message content** is detected in **3 or more different channels** within **8 seconds** by the same user, the bot will:
-
-1. Instantly **ban** the user
-2. Log the action to the configured ticket log channel
-
-This only triggers on **identical cross-channel spam**, not normal fast typing.
-
----
-
-## 📄 License
-
-MIT — Free to use, modify, and distribute.
-
----
-
-## 🙏 Credits
-
-Built with [discord.py](https://discordpy.readthedocs.io/) · Deployed on [Railway](https://railway.app)
+For personal / internal use. Not affiliated with Discord Inc.
