@@ -38,11 +38,7 @@ logging.basicConfig(level=logging.INFO)
 from emoji_config import (
     BADGE_FOUNDER, BADGE_DEVELOPER, BADGE_MANAGEMENT, BADGE_STAFF,
     BADGE_PREMIUM, BADGE_NOPREFIX, BADGE_USER,
-    ICON_MODERATION, ICON_ROLE, ICON_INFO, ICON_TICKET, ICON_LEVEL,
-    ICON_GIVEAWAY, ICON_ANTISPAM, ICON_LANGUAGE, ICON_OWNER,
-    ICON_SUCCESS, ICON_ERROR, ICON_PROFILE, ICON_BADGES, ICON_COMMANDS,
-    ICON_TICKET_OPEN, ICON_TICKET_CLOSE, ICON_GIVEAWAY_REACT, ICON_WINNER,
-    e
+    ICON_TICKET_OPEN, ICON_TICKET_CLOSE, ICON_GIVEAWAY_REACT,
 )
 
 # ══════════════════════════════════════════════════════════════════
@@ -50,18 +46,18 @@ from emoji_config import (
 # ══════════════════════════════════════════════════════════════════
 
 BOT_NAME      = "JOY CANNOT"
-BOT_TAGLINE   = "Nocturne Development."
+BOT_TAGLINE   = "No mercy. No limits. Full control."
 BOT_VERSION   = "1.0.0"
 BOT_PREFIX    = "!joy "
 CONFIG_PATH   = "data/config.json"
 WIB           = pytz.timezone("Asia/Jakarta")
 
-# Dark red palette
-COLOR_PRIMARY = 0x8B0000   # Dark red
-COLOR_SUCCESS = 0x22C55E   # Green
-COLOR_ERROR   = 0xEF4444   # Red
-COLOR_WARNING = 0xF59E0B   # Amber
-COLOR_INFO    = 0xDC143C   # Crimson
+# Kuning & oren — palet JOY CANNOT
+COLOR_PRIMARY = 0xFF8C00   # Dark orange — warna utama embed
+COLOR_SUCCESS = 0x22C55E   # Hijau (tetap — konvensi UX universal buat "berhasil")
+COLOR_ERROR   = 0xEF4444   # Merah (tetap — konvensi UX universal buat "gagal")
+COLOR_WARNING = 0xF59E0B   # Amber — udah pas, gak perlu diganti
+COLOR_INFO    = 0xFFD60A   # Kuning cerah — accent info
 
 # Support server invite link — set via env var SUPPORT_INVITE
 SUPPORT_INVITE = os.getenv("SUPPORT_INVITE", "")
@@ -115,17 +111,10 @@ def load_config() -> dict:
     return data
 
 def _init_guild(gc: dict):
-    gc.setdefault("language",          "en")
     gc.setdefault("main_channel",      None)
     gc.setdefault("announce_channel",  None)
-    gc.setdefault("level_channel",     None)
     gc.setdefault("spam_trap_channel", None)
     gc.setdefault("mod_log_channel",   None)
-    gc.setdefault("leveling_enabled",  True)
-    gc.setdefault("xp_per_message",    [15, 25])
-    gc.setdefault("xp_cooldown",       60)
-    gc.setdefault("members_xp",        {})
-    gc.setdefault("level_roles",       {})
     gc.setdefault("warnings",          {})
     gc.setdefault("active_tickets",    {})
     gc.setdefault("ticket", {
@@ -159,51 +148,26 @@ def guild_cfg(cfg: dict, guild_id: int) -> dict:
     return gc
 
 # ══════════════════════════════════════════════════════════════════
-# LANGUAGE
+# STRING TABLE (Bahasa Indonesia — fixed, tidak ada sistem multi-language)
 # ══════════════════════════════════════════════════════════════════
 
-LANGUAGES = {
-    "en": "English", "id": "Indonesian", "de": "German",
-    "ar": "Arabic",  "th": "Thai",       "vi": "Vietnamese",
-    "ja": "Japanese","ko": "Korean",
-}
-
 STRINGS = {
-    "en": {
-        "no_perm":         "You do not have permission to use this command.",
-        "kick_success":    "{user} has been kicked. Reason: {reason}",
-        "ban_success":     "{user} has been banned. Reason: {reason}",
-        "timeout_success": "{user} has been timed out for {duration} minutes.",
-        "warn_success":    "{user} has been warned. Reason: {reason}",
-        "role_add":        "Role {role} added to {user}.",
-        "role_remove":     "Role {role} removed from {user}.",
-        "move_success":    "{user} moved to {channel}.",
-        "emoji_add":       "Emoji {name} added.",
-        "ticket_open":     "Your ticket has been created: {channel}",
-        "ticket_exists":   "You already have an open ticket.",
-        "lang_set":        "Language set to {lang}.",
-    },
-    "id": {
-        "no_perm":         "Kamu tidak memiliki izin untuk menggunakan perintah ini.",
-        "kick_success":    "{user} telah dikick. Alasan: {reason}",
-        "ban_success":     "{user} telah diban. Alasan: {reason}",
-        "timeout_success": "{user} telah di-timeout selama {duration} menit.",
-        "warn_success":    "{user} telah diperingatkan. Alasan: {reason}",
-        "role_add":        "Peran {role} ditambahkan ke {user}.",
-        "role_remove":     "Peran {role} dihapus dari {user}.",
-        "move_success":    "{user} dipindahkan ke {channel}.",
-        "emoji_add":       "Emoji {name} berhasil ditambahkan.",
-        "ticket_open":     "Tiket kamu telah dibuat: {channel}",
-        "ticket_exists":   "Kamu sudah memiliki tiket yang terbuka.",
-        "lang_set":        "Bahasa diatur ke {lang}.",
-    },
+    "no_perm":         "Kamu tidak memiliki izin untuk menggunakan perintah ini.",
+    "kick_success":    "{user} telah dikick. Alasan: {reason}",
+    "ban_success":     "{user} telah diban. Alasan: {reason}",
+    "timeout_success": "{user} telah di-timeout selama {duration} menit.",
+    "warn_success":    "{user} telah diperingatkan. Alasan: {reason}",
+    "role_add":        "Peran {role} ditambahkan ke {user}.",
+    "role_remove":     "Peran {role} dihapus dari {user}.",
+    "move_success":    "{user} dipindahkan ke {channel}.",
+    "emoji_add":       "Emoji {name} berhasil ditambahkan.",
+    "ticket_open":     "Tiket kamu telah dibuat: {channel}",
 }
 
 def t(cfg: dict, guild_id: int, key: str, **kwargs) -> str:
-    gc   = guild_cfg(cfg, guild_id)
-    lang = gc.get("language", "en")
-    s    = STRINGS.get(lang, STRINGS["en"]).get(key, STRINGS["en"].get(key, key))
-    return s.format(**kwargs)
+    """Ambil template pesan bot. Parameter cfg/guild_id dipertahankan untuk
+    kompatibilitas pemanggilan lama, meski bot sekarang fixed Bahasa Indonesia."""
+    return STRINGS.get(key, key).format(**kwargs)
 
 # ══════════════════════════════════════════════════════════════════
 # EMBED HELPERS
@@ -225,33 +189,6 @@ def error_embed(desc: str) -> discord.Embed:
 
 def info_embed(title: str, desc: str) -> discord.Embed:
     return base_embed(title, desc, COLOR_INFO)
-
-# ══════════════════════════════════════════════════════════════════
-# XP / LEVELING
-# ══════════════════════════════════════════════════════════════════
-
-def xp_for_level(level: int) -> int:
-    return 5 * (level ** 2) + 50 * level + 100
-
-def level_from_xp(xp: int) -> int:
-    level = 0
-    while xp >= xp_for_level(level):
-        xp -= xp_for_level(level)
-        level += 1
-    return level
-
-def xp_progress(total_xp: int):
-    level = 0
-    xp    = total_xp
-    while xp >= xp_for_level(level):
-        xp -= xp_for_level(level)
-        level += 1
-    return level, xp, xp_for_level(level)
-
-def get_member_xp(gc: dict, uid: str) -> dict:
-    data = gc["members_xp"].setdefault(uid, {"xp": 0, "level": 0, "last_msg_ts": 0.0, "messages": 0})
-    data.setdefault("messages", 0)
-    return data
 
 # ══════════════════════════════════════════════════════════════════
 # BOT SETUP
@@ -376,11 +313,11 @@ BOT_ROLE_HIERARCHY = ["staff", "management", "developer", "founder"]
 
 BOT_ROLE_BADGES = {
     # Emoji diambil dari emoji_config.py — edit file itu untuk isi ID emoji
-    "founder":    {"label": "FOUNDER",    "color": 0x8B0000, "emoji": BADGE_FOUNDER},
-    "developer":  {"label": "DEVELOPER",  "color": 0xDC143C, "emoji": BADGE_DEVELOPER},
-    "management": {"label": "MANAGEMENT", "color": 0xB22222, "emoji": BADGE_MANAGEMENT},
-    "staff":      {"label": "STAFF",      "color": 0xCD5C5C, "emoji": BADGE_STAFF},
-    "premium":    {"label": "PREMIUM",    "color": 0xF59E0B, "emoji": BADGE_PREMIUM},
+    "founder":    {"label": "FOUNDER",    "color": 0xFF8C00, "emoji": BADGE_FOUNDER},
+    "developer":  {"label": "DEVELOPER",  "color": 0xFF9F1C, "emoji": BADGE_DEVELOPER},
+    "management": {"label": "MANAGEMENT", "color": 0xFFB347, "emoji": BADGE_MANAGEMENT},
+    "staff":      {"label": "STAFF",      "color": 0xFFC96B, "emoji": BADGE_STAFF},
+    "premium":    {"label": "PREMIUM",    "color": 0xFFD60A, "emoji": BADGE_PREMIUM},
     "noprefix":   {"label": "NO PREFIX",  "color": 0x22C55E, "emoji": BADGE_NOPREFIX},
     "user":       {"label": "USER",       "color": 0x6B7280, "emoji": BADGE_USER},
 }
@@ -441,7 +378,7 @@ def build_profile_embed(user: discord.abc.User) -> discord.Embed:
         else:
             badges_value += "\nJoin server support untuk dapat badge **USER**!"
 
-    embed.add_field(name="\u2728 __ALL BADGES__", value=badges_value, inline=False)
+    embed.add_field(name="\u2728 ALL BADGES", value=badges_value, inline=False)
 
     # ── Total Badges & Commands Runned — dua field sejajar ────────────
     embed.add_field(name="Total Badges", value="**" + str(len(badges)) + "**", inline=True)
@@ -1035,23 +972,29 @@ async def on_message(message: discord.Message):
     if not message.guild:
         return
 
-    # ── Respon saat bot cuma di-mention (tanpa command) ─────────────────────
-    if bot.user in message.mentions and message.content.strip() in (
-        f"<@{bot.user.id}>", f"<@!{bot.user.id}>"
-    ):
-        is_owner_user = (message.author.id == bot.owner_id)
-        mention_embed = base_embed(
-            f"Halo {message.author.display_name}!",
-            f"Prefix aku: **`!joy`** atau **`!j`**\n"
-            f"Ketik `!joy help` buat lihat semua command."
-            + ("\n\n\u2728 Kamu punya akses **no-prefix**!" if is_owner_user or user_has_premium(message.guild, message.author) else ""),
-            color=COLOR_PRIMARY
-        )
-        try:
-            await message.reply(embed=mention_embed, mention_author=False)
-        except Exception:
-            pass
-        return
+    # ── Bot di-mention (dengan atau tanpa command) ──────────────────────────
+    mention_forms = (f"<@{bot.user.id}>", f"<@!{bot.user.id}>")
+    stripped = message.content.strip()
+    if bot.user in message.mentions and stripped.startswith(mention_forms):
+        used_form = next(mp for mp in mention_forms if stripped.startswith(mp))
+        rest = stripped[len(used_form):].strip()
+        if not rest:
+            # Cuma di-tag doang tanpa command → kasih tau prefix
+            is_owner_user = (message.author.id == bot.owner_id)
+            mention_embed = base_embed(
+                f"Halo {message.author.display_name}!",
+                f"Prefix aku: **`!joy`** atau **`!j`**\n"
+                f"Ketik `!joy help` buat lihat semua command."
+                + ("\n\n\u2728 Kamu punya akses **no-prefix**!" if is_owner_user or user_has_premium(message.guild, message.author) else ""),
+                color=COLOR_PRIMARY
+            )
+            try:
+                await message.reply(embed=mention_embed, mention_author=False)
+            except Exception:
+                pass
+            return
+        # Di-tag + command → perlakukan mention itu sebagai prefix
+        message.content = "!joy " + rest
 
     # ── Honeypot channel check ────────────────────────────────────────────
     gc_trap  = guild_cfg(cfg, message.guild.id)
@@ -1106,38 +1049,6 @@ async def on_message(message: discord.Message):
                 await log_ch.send(embed=mirror)
             except Exception:
                 pass
-
-    # ── XP system ─────────────────────────────────────────────────────────
-    gc = guild_cfg(cfg, message.guild.id)
-    if gc.get("leveling_enabled", True):
-        import time
-        uid  = str(message.author.id)
-        data = get_member_xp(gc, uid)
-        now  = time.time()
-        cd   = gc.get("xp_cooldown", 60)
-        if now - data.get("last_msg_ts", 0) >= cd:
-            xp_min, xp_max = gc.get("xp_per_message", [15, 25])
-            gain           = random.randint(xp_min, xp_max)
-            old_level      = data["level"]
-            data["xp"]    += gain
-            data["level"]  = level_from_xp(data["xp"])
-            data["last_msg_ts"] = now
-            data["messages"]    = data.get("messages", 0) + 1
-            save_config(cfg)
-            if data["level"] > old_level:
-                lvl_ch_id = gc.get("level_channel")
-                lvl_ch    = message.guild.get_channel(lvl_ch_id) if lvl_ch_id else message.channel
-                if lvl_ch:
-                    lvl_emb = discord.Embed(
-                        description=f"{message.author.mention} leveled up to **Level {data['level']}**!",
-                        color=COLOR_ERROR
-                    )
-                    lvl_emb.set_author(name="Level Up!", icon_url=message.author.display_avatar.url)
-                    lvl_emb.set_footer(text=BOT_NAME)
-                    try:
-                        await lvl_ch.send(embed=lvl_emb, delete_after=30)
-                    except Exception:
-                        pass
 
     # ── Anti cross-channel spam ────────────────────────────────────────────
     uid         = message.author.id
@@ -1456,191 +1367,6 @@ async def pfx_profile(ctx, member: discord.Member = None):
     )
     await ctx.send(embed=embed)
 
-# ── RANK & LEADERBOARD ────────────────────────────────────────────
-
-@bot.command(name="rank")
-async def pfx_rank(ctx, member: discord.Member = None):
-    import aiohttp, io
-    target      = member or ctx.author
-    gc          = guild_cfg(cfg, ctx.guild.id)
-    data        = get_member_xp(gc, str(target.id))
-    lvl, cx, nx = xp_progress(data["xp"])
-    all_m       = sorted(gc["members_xp"].items(), key=lambda x: x[1].get("xp", 0), reverse=True)
-    rank        = next((i+1 for i, (uid, _) in enumerate(all_m) if uid == str(target.id)), 1)
-    pct         = int((cx / max(nx, 1)) * 100)
-    avatar_url  = str(target.display_avatar.with_format("png").with_size(256))
-    is_prem     = user_has_premium(ctx.guild, target)
-    bar_color   = "F59E0B" if is_prem else "8B0000"
-    api_url     = (
-        "https://some-random-api.com/canvas/misc/rank-card"
-        f"?username={target.display_name}"
-        f"&avatar={avatar_url}"
-        f"&currentxp={cx}&neededxp={nx}"
-        f"&level={lvl}&rank={rank}"
-        f"&barcolor={bar_color}"
-    )
-    async with ctx.typing():
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                    if resp.status == 200 and "image" in resp.content_type:
-                        img_bytes = await resp.read()
-                        file  = discord.File(io.BytesIO(img_bytes), filename="rank.png")
-                        embed = discord.Embed(color=int(bar_color, 16), timestamp=discord.utils.utcnow())
-                        embed.set_author(name=f"Rank Card — {target.display_name}", icon_url=target.display_avatar.url)
-                        embed.set_image(url="attachment://rank.png")
-                        embed.set_footer(text=f"Total XP: {data['xp']:,} · Messages: {data.get('messages',0):,} · {ctx.guild.name}")
-                        return await ctx.send(file=file, embed=embed)
-        except Exception:
-            pass
-    # Fallback embed
-    bar   = "▰" * int(pct/100*16) + "▱" * (16-int(pct/100*16))
-    embed = discord.Embed(
-        description=(
-            f"**@{target.display_name}**\n\n"
-            f"**Level: {lvl}** | **XP: {cx:,}/{nx:,}** | **Rank: #{rank}**\n\n"
-            f"`{bar}` {pct}%\n\n"
-            f"*Total XP: {data['xp']:,} | Messages: {data.get('messages',0):,}*"
-        ),
-        color=COLOR_PRIMARY, timestamp=discord.utils.utcnow()
-    )
-    embed.set_author(name="Rank Card", icon_url=target.display_avatar.url)
-    embed.set_thumbnail(url=target.display_avatar.url)
-    embed.set_footer(text=BOT_NAME)
-    await ctx.send(embed=embed)
-
-@bot.command(name="leaderboard")
-async def pfx_leaderboard(ctx):
-    gc    = guild_cfg(cfg, ctx.guild.id)
-    all_d = sorted(gc["members_xp"].items(), key=lambda x: x[1].get("xp", 0), reverse=True)[:10]
-    if not all_d:
-        return await ctx.send(embed=info_embed("Leaderboard", "Belum ada data XP."))
-    lines = []
-    for idx, (uid, data) in enumerate(all_d):
-        m     = ctx.guild.get_member(int(uid))
-        name  = m.display_name if m else f"User ({uid[:6]})"
-        medal = ["#1","#2","#3"][idx] if idx < 3 else f"#{idx+1}"
-        lines.append(f"**{medal} {name}** — Level **{data.get('level',0)}** · {data.get('xp',0):,} XP")
-    embed = discord.Embed(title="XP Leaderboard", description="\n".join(lines), color=COLOR_PRIMARY, timestamp=discord.utils.utcnow())
-    embed.set_footer(text=f"{BOT_NAME} · {ctx.guild.name}")
-    await ctx.send(embed=embed)
-
-@bot.command(name="level")
-async def pfx_level(ctx, sub: str = "", *args):
-    sub = sub.lower()
-    gc  = guild_cfg(cfg, ctx.guild.id)
-
-    if sub == "rank":
-        m = None
-        if args:
-            try: m = ctx.guild.get_member(int(args[0].strip("<@!>")))
-            except Exception: pass
-        await pfx_rank(ctx, m)
-
-    elif sub == "leaderboard":
-        await pfx_leaderboard(ctx)
-
-    elif sub == "toggle":
-        if ctx.author.id != bot.owner_id and not ctx.author.guild_permissions.manage_guild:
-            return await ctx.send(embed=error_embed(t(cfg, ctx.guild.id, "no_perm")))
-        current = gc.get("leveling_enabled", True)
-        gc["leveling_enabled"] = not current
-        save_config(cfg)
-        state = "diaktifkan" if gc["leveling_enabled"] else "dimatikan"
-        color = COLOR_SUCCESS if gc["leveling_enabled"] else COLOR_ERROR
-        await ctx.send(embed=base_embed("Leveling System",
-            "Sistem leveling **" + state + "** di server ini.", color=color))
-
-    elif sub == "setchannel":
-        if ctx.author.id != bot.owner_id and not ctx.author.guild_permissions.manage_guild:
-            return await ctx.send(embed=error_embed(t(cfg, ctx.guild.id, "no_perm")))
-        if not args:
-            gc["level_channel"] = None
-            save_config(cfg)
-            return await ctx.send(embed=success_embed("Level channel dinonaktifkan. Notif dikirim ke channel aktif."))
-        ch = None
-        if ctx.message.channel_mentions:
-            ch = ctx.message.channel_mentions[0]
-        elif args[0].isdigit():
-            ch = ctx.guild.get_channel(int(args[0]))
-        if not ch:
-            return await ctx.send(embed=error_embed("Channel tidak ditemukan. Gunakan #mention atau channel ID."))
-        gc["level_channel"] = ch.id
-        save_config(cfg)
-        await ctx.send(embed=success_embed("Level-up notif akan dikirim ke " + ch.mention + "."))
-
-    elif sub == "status":
-        enabled  = gc.get("leveling_enabled", True)
-        lvl_ch   = ctx.guild.get_channel(gc["level_channel"]) if gc.get("level_channel") else None
-        xp_range = gc.get("xp_per_message", [15, 25])
-        cooldown = gc.get("xp_cooldown", 60)
-        embed = base_embed("Leveling Status", None, COLOR_SUCCESS if enabled else COLOR_ERROR)
-        embed.add_field(name="Status",     value="Aktif" if enabled else "Mati",                  inline=True)
-        embed.add_field(name="Channel",    value=lvl_ch.mention if lvl_ch else "Current channel",  inline=True)
-        embed.add_field(name="XP/Message", value=str(xp_range[0]) + "-" + str(xp_range[1]) + " XP", inline=True)
-        embed.add_field(name="Cooldown",   value=str(cooldown) + " detik",                        inline=True)
-        await ctx.send(embed=embed)
-
-    else:
-        enabled = gc.get("leveling_enabled", True)
-        status  = "Aktif" if enabled else "Mati"
-        await ctx.send(embed=info_embed("Level System",
-            "Status: **" + status + "**\n\n"
-            "`level toggle` - nyalain/matiin leveling\n"
-            "`level setchannel #channel` - set channel notif\n"
-            "`level setchannel` - nonaktifkan channel\n"
-            "`level status` - lihat konfigurasi\n"
-            "`level rank [@user]` - lihat rank\n"
-            "`level leaderboard` - top 10"))
-@bot.command(name="xp")
-async def pfx_xp(ctx, sub: str = "", *args):
-    if ctx.author.id != bot.owner_id and not ctx.author.guild_permissions.manage_guild:
-        return await ctx.send(embed=error_embed(t(cfg, ctx.guild.id, "no_perm")))
-    sub  = sub.lower()
-    gc   = guild_cfg(cfg, ctx.guild.id)
-    VALID = ("add","remove","set","setlevel","reset")
-    if sub not in VALID:
-        return await ctx.send(embed=info_embed("XP", "`xp add/remove/set @user <amount>` · `xp setlevel @user <lvl>` · `xp reset @user`"))
-    if not args:
-        return await ctx.send(embed=error_embed(f"Usage: `xp {sub} @user [amount]`"))
-    try:
-        member = ctx.guild.get_member(int(args[0].strip("<@!>")))
-        if not member: return await ctx.send(embed=error_embed("Member tidak ditemukan."))
-    except ValueError:
-        return await ctx.send(embed=error_embed("Mention atau ID yang valid."))
-    data = get_member_xp(gc, str(member.id))
-    if sub == "reset":
-        gc["members_xp"][str(member.id)] = {"xp":0,"level":0,"last_msg_ts":0.0,"messages":0}
-        save_config(cfg)
-        return await ctx.send(embed=success_embed(f"XP {member.mention} di-reset."))
-    if len(args) < 2:
-        return await ctx.send(embed=error_embed(f"Usage: `xp {sub} @user <amount>`"))
-    try:
-        amount = int(args[1])
-    except ValueError:
-        return await ctx.send(embed=error_embed("Amount harus angka."))
-    if sub == "add":
-        data["xp"] = max(0, data["xp"] + amount)
-        data["level"] = level_from_xp(data["xp"])
-        save_config(cfg)
-        await ctx.send(embed=success_embed(f"+{amount} XP ke {member.mention} (Total: {data['xp']:,} · Level {data['level']})"))
-    elif sub == "remove":
-        data["xp"] = max(0, data["xp"] - amount)
-        data["level"] = level_from_xp(data["xp"])
-        save_config(cfg)
-        await ctx.send(embed=success_embed(f"-{amount} XP dari {member.mention} (Total: {data['xp']:,} · Level {data['level']})"))
-    elif sub == "set":
-        data["xp"] = max(0, amount)
-        data["level"] = level_from_xp(data["xp"])
-        save_config(cfg)
-        await ctx.send(embed=success_embed(f"XP {member.mention} → {amount:,} (Level {data['level']})"))
-    elif sub == "setlevel":
-        if not 0 <= amount <= 999: return await ctx.send(embed=error_embed("Level 0–999."))
-        total = sum(xp_for_level(lv) for lv in range(amount))
-        data["xp"] = total; data["level"] = amount
-        save_config(cfg)
-        await ctx.send(embed=success_embed(f"Level {member.mention} → **{amount}** ({total:,} XP)"))
-
 # ── TICKET ────────────────────────────────────────────────────────
 
 @bot.command(name="ticket")
@@ -1715,6 +1441,143 @@ async def pfx_ticket(ctx, sub: str = "", *, rest: str = ""):
             '`ticket setup <cat_id> <log_category_id> [role_id] [max]`\n'
             '`ticket panel "Judul" "Deskripsi"` — deskripsi opsional\n'
             '`ticket close [reason]`'
+        ))
+
+# ── SCHEDULED EVENT ──────────────────────────────────────────────
+
+_DURATION_RE = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?")
+
+def _parse_duration_secs(text: str) -> Optional[int]:
+    m = _DURATION_RE.fullmatch(text.lower().strip())
+    if not m or not any(m.group(x) for x in (1, 2, 3)):
+        return None
+    return int(m.group(1) or 0) * 86400 + int(m.group(2) or 0) * 3600 + int(m.group(3) or 0) * 60
+
+async def _create_scheduled_event(guild: discord.Guild, name: str, starts_in: str,
+                                   announce_channel: Optional[discord.TextChannel],
+                                   description: Optional[str],
+                                   voice_channel: Optional[discord.abc.GuildChannel] = None):
+    """
+    Bikin native Discord Scheduled Event, DAN kirim notifikasi/pengumumannya
+    ke text channel biasa (announce_channel) — bukan cuma nongol di tab Events doang.
+    voice_channel opsional, cuma dipakai kalau event-nya beneran mau di voice/stage channel.
+    """
+    delta_secs = _parse_duration_secs(starts_in)
+    if delta_secs is None:
+        return None, error_embed("Format waktu mulai: `1h`, `30m`, `2h30m`, `1d`.")
+    if delta_secs < 300:
+        return None, error_embed("Waktu mulai minimal 5 menit dari sekarang.")
+
+    start_time = discord.utils.utcnow() + datetime.timedelta(seconds=delta_secs)
+    kwargs = {
+        "name":          name,
+        "start_time":    start_time,
+        "description":   description or "\u200b",
+        "privacy_level": discord.PrivacyLevel.guild_only,
+    }
+
+    is_voice_event = isinstance(voice_channel, (discord.VoiceChannel, discord.StageChannel))
+    if is_voice_event:
+        kwargs["channel"]     = voice_channel
+        kwargs["entity_type"] = (discord.EntityType.stage_instance
+                                  if isinstance(voice_channel, discord.StageChannel)
+                                  else discord.EntityType.voice)
+    else:
+        kwargs["entity_type"] = discord.EntityType.external
+        kwargs["location"]    = (announce_channel.mention if announce_channel else guild.name)
+        kwargs["end_time"]    = start_time + datetime.timedelta(hours=2)
+
+    try:
+        event = await guild.create_scheduled_event(**kwargs)
+    except discord.Forbidden:
+        return None, error_embed("Bot butuh permission **Manage Events** buat bikin scheduled event.")
+    except Exception as e:
+        return None, error_embed(f"Gagal membuat event: {e}")
+
+    # ── Kirim notifikasi/pengumuman ke text channel biasa ───────────────────
+    if announce_channel:
+        announce = base_embed(f"📅 Event Baru: {event.name}", description or "\u200b", color=COLOR_PRIMARY)
+        announce.add_field(
+            name="Mulai",
+            value=discord.utils.format_dt(start_time, "F") + "\n" + discord.utils.format_dt(start_time, "R"),
+            inline=True
+        )
+        if is_voice_event:
+            announce.add_field(name="Lokasi", value=voice_channel.mention, inline=True)
+        announce.add_field(name="Info & RSVP", value=f"[Klik di sini]({event.url})", inline=True)
+        try:
+            await announce_channel.send(embed=announce)
+        except Exception:
+            pass
+
+    confirm = base_embed("Event Created", None, color=COLOR_SUCCESS)
+    confirm.add_field(name="Nama",  value=event.name, inline=True)
+    confirm.add_field(name="Mulai", value=discord.utils.format_dt(start_time, "R"), inline=True)
+    confirm.add_field(name="Notifikasi", value=announce_channel.mention if announce_channel else "Tidak dikirim", inline=True)
+    confirm.add_field(name="Link",  value=f"[Klik di sini]({event.url})", inline=False)
+    return event, confirm
+
+@bot.command(name="event")
+async def pfx_event(ctx, sub: str = "", *, rest: str = ""):
+    sub = sub.lower()
+
+    if sub == "create":
+        if ctx.author.id != bot.owner_id and not ctx.author.guild_permissions.manage_events:
+            return await ctx.send(embed=error_embed(t(cfg, ctx.guild.id, "no_perm")))
+        try:
+            parts = shlex.split(rest) if rest.strip() else []
+        except ValueError:
+            parts = rest.split()
+        if len(parts) < 2:
+            return await ctx.send(embed=error_embed(
+                'Usage: `event create "<nama>" <mulai_dalam> [#channel] ["<deskripsi>"]`\n'
+                "`#channel` = text channel buat kirim notifikasi (default: channel ini).\n"
+                "Kalau isi `#channel` dengan voice/stage channel, event-nya bakal dibikin di situ,\n"
+                "notifikasi tetap dikirim ke channel tempat command ini dijalankan.\n"
+                'Contoh: `event create "Movie Night" 2h #pengumuman "Nonton bareng!"`'
+            ))
+        name, starts_in = parts[0], parts[1]
+        channel_arg  = parts[2] if len(parts) > 2 else None
+        description  = parts[3] if len(parts) > 3 else None
+
+        channel_obj = None
+        if ctx.message.channel_mentions:
+            channel_obj = ctx.message.channel_mentions[0]
+        elif channel_arg and channel_arg.strip("<#>").isdigit():
+            channel_obj = ctx.guild.get_channel(int(channel_arg.strip("<#>")))
+
+        voice_channel    = channel_obj if isinstance(channel_obj, (discord.VoiceChannel, discord.StageChannel)) else None
+        announce_channel = channel_obj if isinstance(channel_obj, discord.TextChannel) else ctx.channel
+
+        _, embed = await _create_scheduled_event(ctx.guild, name, starts_in, announce_channel, description, voice_channel)
+        await ctx.send(embed=embed)
+
+    elif sub == "list":
+        events = await ctx.guild.fetch_scheduled_events()
+        if not events:
+            return await ctx.send(embed=info_embed("Scheduled Events", "Belum ada event yang dijadwalkan."))
+        lines = [f"**{ev.name}** — {discord.utils.format_dt(ev.start_time, 'R')} · [Link]({ev.url})" for ev in events]
+        await ctx.send(embed=info_embed("Scheduled Events", "\n".join(lines)))
+
+    elif sub == "cancel":
+        if ctx.author.id != bot.owner_id and not ctx.author.guild_permissions.manage_events:
+            return await ctx.send(embed=error_embed(t(cfg, ctx.guild.id, "no_perm")))
+        if not rest.strip().isdigit():
+            return await ctx.send(embed=error_embed("Usage: `event cancel <event_id>`"))
+        try:
+            event = await ctx.guild.fetch_scheduled_event(int(rest.strip()))
+            await event.delete()
+            await ctx.send(embed=success_embed(f"Event **{event.name}** dibatalkan."))
+        except discord.NotFound:
+            await ctx.send(embed=error_embed("Event tidak ditemukan."))
+        except Exception as e:
+            await ctx.send(embed=error_embed(f"Gagal membatalkan event: {e}"))
+
+    else:
+        await ctx.send(embed=info_embed(
+            "Scheduled Event",
+            'Usage: `event create "<nama>" <mulai_dalam> [#voice|"<lokasi>"] ["<deskripsi>"]`\n'
+            "`event list` · `event cancel <event_id>`"
         ))
 
 # ── GIVEAWAY ─────────────────────────────────────────────────────
@@ -1825,23 +1688,6 @@ async def pfx_giveaway(ctx, sub: str = "", *args):
             "`giveaway start <durasi> <winners> <prize>`\n"
             "  Optional: `--role <id>` `--winrole <id>`\n"
             "`giveaway end <msg_id>` · `giveaway reroll <msg_id>` · `giveaway list`"))
-
-# ── LANGUAGE ─────────────────────────────────────────────────────
-
-@bot.command(name="language")
-async def pfx_language(ctx, action: str = "list", lang: str = ""):
-    if action.lower() == "set":
-        if ctx.author.id != bot.owner_id and not ctx.author.guild_permissions.manage_guild:
-            return await ctx.send(embed=error_embed(t(cfg, ctx.guild.id, "no_perm")))
-        if lang not in LANGUAGES:
-            return await ctx.send(embed=error_embed(f"Valid codes: {', '.join(LANGUAGES.keys())}"))
-        guild_cfg(cfg, ctx.guild.id)["language"] = lang
-        save_config(cfg)
-        await ctx.send(embed=success_embed(f"Bahasa diatur ke **{LANGUAGES[lang]}**."))
-    else:
-        cur   = guild_cfg(cfg, ctx.guild.id).get("language", "en")
-        lines = "\n".join(f"{'[OK]' if k==cur else '[ ]'} `{k}` — {v}" for k, v in LANGUAGES.items())
-        await ctx.send(embed=info_embed("Supported Languages", lines))
 
 # ── ANTISPAM HONEYPOT ─────────────────────────────────────────────
 
@@ -2166,118 +2012,184 @@ async def pfx_vxleave(ctx, guild_id: str = ""):
 
 # ── HELP ─────────────────────────────────────────────────────────
 
-@bot.command(name="help")
-async def pfx_help(ctx):
-    is_owner_user = (ctx.author.id == bot.owner_id)
-    np_users  = cfg.get("no_prefix_users",  [])
-    np_guilds = cfg.get("no_prefix_guilds", [])
-    has_np    = (is_owner_user or ctx.author.id in np_users or (ctx.guild and ctx.guild.id in np_guilds)
-                 or user_has_premium(ctx.guild, ctx.author))
+HELP_CATEGORIES = {
+    "moderation": {
+        "label": "Moderation", "emoji": "🛡️",
+        "value": (
+            "`kick` · `ban` · `unban` · `timeout` · `untimeout`\n"
+            "`warn` · `warnings` · `unwarn` · `clearwarnings`\n"
+            "`purge` · `lock` · `unlock` · `slowmode`"
+        ),
+    },
+    "role": {
+        "label": "Role & Voice", "emoji": "🎭",
+        "value": "`addrole` · `removerole` · `move`",
+    },
+    "info": {
+        "label": "Info", "emoji": "ℹ️",
+        "value": "`userinfo` · `serverinfo` · `avatar` · `ping` · `addemoji` · `profile`",
+    },
+    "ticket": {
+        "label": "Ticket", "emoji": "🎫",
+        "value": (
+            '`ticket setup <cat_id> <log_category_id> [role] [max]`\n'
+            '`ticket panel "Judul" "Deskripsi"` — deskripsi opsional\n'
+            '`ticket close [reason]`'
+        ),
+    },
+    "event": {
+        "label": "Scheduled Event", "emoji": "📅",
+        "value": (
+            '`event create "<nama>" <mulai_dalam> [#channel] ["<deskripsi>"]`\n'
+            "`#channel` = text channel notifikasi (default: channel ini)\n"
+            "`event list` · `event cancel <event_id>`\n"
+            "Slash: `/createvent`"
+        ),
+    },
+    "giveaway": {
+        "label": "Giveaway", "emoji": "🎉",
+        "value": "`giveaway start/end/reroll/list`\nOptional: `--role <id>` · `--winrole <id>`",
+    },
+    "antispam": {
+        "label": "Antispam", "emoji": "🚫",
+        "value": "`antispam setchannel #ch` · `antispam logchannel #ch` · `antispam status`",
+    },
+    "owner": {
+        "label": "Owner Only", "emoji": "👑", "owner_only": True,
+        "value": (
+            "`maintenance on/off/status`\n"
+            "`noprefix grant/revoke/list`\n"
+            "`botrole set/remove/list`\n"
+            "`grantpremium @user <durasi>/revoke`\n"
+            "`premiumlock add/remove/list <command>`\n"
+            "`syncsupport`\n"
+            "`blacklist add/remove/list`\n"
+            "`vxleave <guild_id>`"
+        ),
+    },
+}
+
+def _visible_help_categories(is_owner_user: bool) -> dict:
+    return {k: v for k, v in HELP_CATEGORIES.items() if is_owner_user or not v.get("owner_only")}
+
+def build_help_home_embed(is_owner_user: bool, has_np: bool) -> discord.Embed:
+    cats  = _visible_help_categories(is_owner_user)
     embed = discord.Embed(
-        title=f"{BOT_NAME} — Command Reference",
+        title=f"{BOT_NAME} — Help Menu",
         description=(
             f"*{BOT_TAGLINE}*\n\n"
-            f"Prefix: **`!joy`** · **`!j`** (alias)\n"
-            + ("✨ **No-prefix aktif** — ketik command langsung!\n" if has_np else "")
-            + "\u200b"
+            f"Prefix aku: **`!joy`** atau **`!j`**\n"
+            + ("✨ Kamu punya akses **no-prefix**!\n" if has_np else "")
+            + "\nPilih kategori di menu bawah buat lihat daftar command."
         ),
         color=COLOR_PRIMARY,
         timestamp=discord.utils.utcnow()
     )
-    def sec(icon_var, name):
-        return (icon_var + " " if icon_var else "") + name
-
-    embed.add_field(name=sec(ICON_MODERATION, "Moderation"), value=(
-        "`kick` · `ban` · `unban` · `timeout` · `untimeout`\n"
-        "`warn` · `warnings` · `unwarn` · `clearwarnings`\n"
-        "`purge` · `lock` · `unlock` · `slowmode`"
-    ), inline=False)
-    embed.add_field(name=sec(ICON_ROLE, "Role & Voice"),
-        value="`addrole` · `removerole` · `move`", inline=False)
-    embed.add_field(name=sec(ICON_INFO, "Info"),
-        value="`userinfo` · `serverinfo` · `avatar` · `ping` · `addemoji` · `profile`", inline=False)
-    embed.add_field(name=sec(ICON_TICKET, "Ticket"),
-        value='`ticket setup <cat> <log_cat> [role] [max]` · `ticket panel "Judul" "Deskripsi"` · `ticket close [reason]`', inline=False)
-    embed.add_field(name=sec(ICON_LEVEL, "Level & XP"),
-        value="`rank` · `leaderboard` · `level toggle/setchannel/status` · `xp`", inline=False)
-    embed.add_field(name=sec(ICON_GIVEAWAY, "Giveaway"),
-        value="`giveaway start/end/reroll/list`\n`--role <id>` · `--winrole <id>`", inline=False)
-    embed.add_field(name=sec(ICON_ANTISPAM, "Antispam"),
-        value="`antispam setchannel #ch` · `antispam logchannel #ch` · `antispam status`", inline=False)
-    embed.add_field(name=sec(ICON_LANGUAGE, "Language"),
-        value="`language list` · `language set <code>`", inline=False)
-    embed.add_field(name=sec(ICON_OWNER, "Owner Only"), value=(
-        "`maintenance on/off/status`\n"
-        "`noprefix grant/revoke/list`\n"
-        "`botrole set/remove/list`\n"
-        "`grantpremium @user <durasi>/revoke`\n"
-        "`premiumlock add/remove/list <command>`\n"
-        "`syncsupport`\n"
-        "`blacklist add/remove/list`\n"
-        "`vxleave <guild_id>`"
-    ), inline=False)
+    for c in cats.values():
+        embed.add_field(name=f"{c['emoji']} {c['label']}", value="\u200b", inline=True)
     embed.set_footer(text=BOT_NAME + " v" + BOT_VERSION + " • " + BOT_TAGLINE)
-    await ctx.send(embed=embed)
+    return embed
+
+def build_help_category_embed(key: str) -> discord.Embed:
+    c     = HELP_CATEGORIES[key]
+    embed = discord.Embed(
+        title=f"{c['emoji']} {c['label']} Commands",
+        description=c["value"],
+        color=COLOR_PRIMARY,
+        timestamp=discord.utils.utcnow()
+    )
+    embed.set_footer(text=BOT_NAME + " v" + BOT_VERSION + " • " + BOT_TAGLINE)
+    return embed
+
+class HelpSelect(discord.ui.Select):
+    def __init__(self, is_owner_user: bool):
+        options = [
+            discord.SelectOption(label=c["label"], value=k, emoji=c["emoji"])
+            for k, c in _visible_help_categories(is_owner_user).items()
+        ]
+        super().__init__(placeholder="❯ Pilih kategori", options=options, custom_id="vx_help_select")
+
+    async def callback(self, interaction: discord.Interaction):
+        view: "HelpView" = self.view
+        if interaction.user.id != view.author_id:
+            return await interaction.response.send_message(
+                embed=error_embed("Menu ini bukan buat kamu — ketik `!joy help` sendiri ya."), ephemeral=True)
+        await interaction.response.edit_message(embed=build_help_category_embed(self.values[0]), view=view)
+
+class HelpHomeButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="Home", style=discord.ButtonStyle.secondary, row=1, custom_id="vx_help_home")
+
+    async def callback(self, interaction: discord.Interaction):
+        view: "HelpView" = self.view
+        if interaction.user.id != view.author_id:
+            return await interaction.response.send_message(
+                embed=error_embed("Menu ini bukan buat kamu — ketik `!joy help` sendiri ya."), ephemeral=True)
+        embed = build_help_home_embed(view.is_owner_user, view.has_np)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+class HelpView(discord.ui.View):
+    def __init__(self, author_id: int, is_owner_user: bool, has_np: bool, timeout: float = 120):
+        super().__init__(timeout=timeout)
+        self.author_id     = author_id
+        self.is_owner_user = is_owner_user
+        self.has_np        = has_np
+        self.message: Optional[discord.Message] = None
+        self.add_item(HelpSelect(is_owner_user))
+        self.add_item(HelpHomeButton())
+        if SUPPORT_INVITE:
+            self.add_item(discord.ui.Button(label="Support Server", style=discord.ButtonStyle.link, url=SUPPORT_INVITE, row=1))
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception:
+                pass
+
+def _resolve_np_status(guild: Optional[discord.Guild], user: discord.abc.User, is_owner_user: bool) -> bool:
+    np_users  = cfg.get("no_prefix_users",  [])
+    np_guilds = cfg.get("no_prefix_guilds", [])
+    return (is_owner_user or user.id in np_users or (guild and guild.id in np_guilds)
+            or user_has_premium(guild, user))
+
+@bot.command(name="help")
+async def pfx_help(ctx):
+    is_owner_user = (ctx.author.id == bot.owner_id)
+    has_np        = _resolve_np_status(ctx.guild, ctx.author, is_owner_user)
+    view          = HelpView(ctx.author.id, is_owner_user, has_np)
+    view.message  = await ctx.send(embed=build_help_home_embed(is_owner_user, has_np), view=view)
 
 # ══════════════════════════════════════════════════════════════════
 # SLASH COMMANDS
 # ══════════════════════════════════════════════════════════════════
 
-@bot.tree.command(name="rank", description="Lihat rank card XP kamu atau member lain.")
-@app_commands.describe(member="Member yang ingin dilihat ranknya")
-async def slash_rank(i: discord.Interaction, member: Optional[discord.Member] = None):
-    ctx_like = type("C", (), {"guild": i.guild, "author": i.user, "channel": i.channel,
-                              "typing": i.channel.typing, "send": i.followup.send})()
+@bot.tree.command(name="createvent", description="Buat scheduled event Discord baru.")
+@app_commands.describe(
+    name="Nama event",
+    starts_in="Kapan event mulai — contoh: 2h, 1d, 30m",
+    announce_channel="Text channel buat kirim notifikasi/pengumuman event (default: channel ini)",
+    voice_channel="Voice/Stage channel, isi kalau event-nya beneran di voice (opsional)",
+    description="Deskripsi event (opsional)"
+)
+async def slash_createvent(
+    i: discord.Interaction,
+    name: str,
+    starts_in: str,
+    announce_channel: Optional[discord.TextChannel] = None,
+    voice_channel: Optional[discord.VoiceChannel] = None,
+    description: Optional[str] = None
+):
+    if i.user.id != bot.owner_id and not i.user.guild_permissions.manage_events:
+        return await i.response.send_message(embed=error_embed(t(cfg, i.guild.id, "no_perm")), ephemeral=True)
     await i.response.defer()
-    target      = member or i.user
-    gc          = guild_cfg(cfg, i.guild.id)
-    data        = get_member_xp(gc, str(target.id))
-    lvl, cx, nx = xp_progress(data["xp"])
-    all_m       = sorted(gc["members_xp"].items(), key=lambda x: x[1].get("xp",0), reverse=True)
-    rank        = next((idx+1 for idx,(uid,_) in enumerate(all_m) if uid == str(target.id)), 1)
-    pct         = int((cx / max(nx,1)) * 100)
-    avatar_url  = str(target.display_avatar.with_format("png").with_size(256))
-    bar_color   = "F59E0B" if user_has_premium(i.guild, target) else "8B0000"
-    import aiohttp, io
-    api_url = (
-        "https://some-random-api.com/canvas/misc/rank-card"
-        f"?username={target.display_name}&avatar={avatar_url}"
-        f"&currentxp={cx}&neededxp={nx}&level={lvl}&rank={rank}&barcolor={bar_color}"
+    target_announce = announce_channel or i.channel
+    _, embed = await _create_scheduled_event(
+        i.guild, name, starts_in, target_announce, description, voice_channel
     )
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 200 and "image" in resp.content_type:
-                    img_bytes = await resp.read()
-                    file  = discord.File(io.BytesIO(img_bytes), filename="rank.png")
-                    embed = discord.Embed(color=int(bar_color,16), timestamp=discord.utils.utcnow())
-                    embed.set_author(name=f"Rank Card — {target.display_name}", icon_url=target.display_avatar.url)
-                    embed.set_image(url="attachment://rank.png")
-                    embed.set_footer(text=f"Total XP: {data['xp']:,} · Messages: {data.get('messages',0):,}")
-                    return await i.followup.send(file=file, embed=embed)
-    except Exception:
-        pass
-    bar   = "▰"*int(pct/100*16) + "▱"*(16-int(pct/100*16))
-    embed = discord.Embed(description=f"**@{target.display_name}**\n\n**Level: {lvl}** | **XP: {cx:,}/{nx:,}** | **Rank: #{rank}**\n\n`{bar}` {pct}%\n\n*Total XP: {data['xp']:,}*", color=COLOR_PRIMARY)
-    embed.set_author(name="Rank Card", icon_url=target.display_avatar.url)
-    embed.set_thumbnail(url=target.display_avatar.url)
     await i.followup.send(embed=embed)
-
-@bot.tree.command(name="leaderboard", description="Lihat top 10 XP leaderboard server ini.")
-async def slash_leaderboard(i: discord.Interaction):
-    gc    = guild_cfg(cfg, i.guild.id)
-    all_d = sorted(gc["members_xp"].items(), key=lambda x: x[1].get("xp",0), reverse=True)[:10]
-    if not all_d:
-        return await i.response.send_message(embed=info_embed("Leaderboard", "Belum ada data XP."), ephemeral=True)
-    lines = []
-    for idx,(uid,data) in enumerate(all_d):
-        m     = i.guild.get_member(int(uid))
-        name  = m.display_name if m else f"User ({uid[:6]})"
-        medal = ["#1","#2","#3"][idx] if idx < 3 else f"#{idx+1}"
-        lines.append(f"**{medal} {name}** — Level **{data.get('level',0)}** · {data.get('xp',0):,} XP")
-    embed = discord.Embed(title="XP Leaderboard", description="\n".join(lines), color=COLOR_PRIMARY, timestamp=discord.utils.utcnow())
-    embed.set_footer(text=f"{BOT_NAME} · {i.guild.name}")
-    await i.response.send_message(embed=embed)
 
 @bot.tree.command(name="profile", description="Lihat profile card dan badge kamu atau member lain.")
 @app_commands.describe(member="Member yang ingin dilihat profilenya")
@@ -2322,26 +2234,11 @@ async def slash_ping(i: discord.Interaction):
 
 @bot.tree.command(name="help", description="Lihat semua command JOY CANNOT.")
 async def slash_help(i: discord.Interaction):
-    ctx_like = type("C", (), {"author": i.user, "guild": i.guild})()
     is_owner_user = (i.user.id == bot.owner_id)
-    np_users  = cfg.get("no_prefix_users",  [])
-    np_guilds = cfg.get("no_prefix_guilds", [])
-    has_np    = (is_owner_user or i.user.id in np_users or (i.guild and i.guild.id in np_guilds)
-                 or user_has_premium(i.guild, i.user))
-    embed = discord.Embed(
-        title=f"{BOT_NAME} — Command Reference",
-        description=f"*{BOT_TAGLINE}*\n\nPrefix: **`!joy`** · **`!j`**\n" + ("✨ **No-prefix aktif**\n" if has_np else "") + "\u200b",
-        color=COLOR_PRIMARY, timestamp=discord.utils.utcnow()
-    )
-    embed.add_field(name="Moderation", value="`kick` · `ban` · `unban` · `timeout` · `untimeout`\n`warn` · `warnings` · `unwarn` · `clearwarnings`\n`purge` · `lock` · `unlock` · `slowmode`", inline=False)
-    embed.add_field(name="Role & Voice", value="`addrole` · `removerole` · `move`", inline=False)
-    embed.add_field(name="Info", value="`userinfo` · `serverinfo` · `avatar` · `ping` · `profile`", inline=False)
-    embed.add_field(name="Ticket", value='`ticket setup <cat> <log_cat> [role] [max]` · `ticket panel "Judul" "Deskripsi"` · `ticket close [reason]`', inline=False)
-    embed.add_field(name="Level & XP", value="`rank` · `leaderboard` · `level` · `xp`", inline=False)
-    embed.add_field(name="Giveaway", value="`giveaway start/end/reroll/list`", inline=False)
-    embed.add_field(name="Antispam", value="`antispam setchannel` · `antispam status`", inline=False)
-    embed.set_footer(text=f"{BOT_NAME} v{BOT_VERSION} • {BOT_TAGLINE}")
-    await i.response.send_message(embed=embed, ephemeral=True)
+    has_np        = _resolve_np_status(i.guild, i.user, is_owner_user)
+    view          = HelpView(i.user.id, is_owner_user, has_np)
+    await i.response.send_message(embed=build_help_home_embed(is_owner_user, has_np), view=view, ephemeral=True)
+    view.message = await i.original_response()
 
 
 
