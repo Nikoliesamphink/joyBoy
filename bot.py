@@ -1456,11 +1456,13 @@ def _parse_duration_secs(text: str) -> Optional[int]:
 async def _create_scheduled_event(guild: discord.Guild, name: str, starts_in: str,
                                    announce_channel: Optional[discord.TextChannel],
                                    description: Optional[str],
-                                   voice_channel: Optional[discord.abc.GuildChannel] = None):
+                                   voice_channel: Optional[discord.abc.GuildChannel] = None,
+                                   duration_str: Optional[str] = None):
     """
     Bikin native Discord Scheduled Event, DAN kirim notifikasi/pengumumannya
     ke text channel biasa (announce_channel) — bukan cuma nongol di tab Events doang.
     voice_channel opsional, cuma dipakai kalau event-nya beneran mau di voice/stage channel.
+    duration_str opsional (format sama seperti starts_in, misal "3h") — kalau kosong, default 2 jam.
     """
     delta_secs = _parse_duration_secs(starts_in)
     if delta_secs is None:
@@ -1468,7 +1470,17 @@ async def _create_scheduled_event(guild: discord.Guild, name: str, starts_in: st
     if delta_secs < 300:
         return None, error_embed("Waktu mulai minimal 5 menit dari sekarang.")
 
+    duration_secs = 7200  # default 2 jam kalau gak diisi
+    if duration_str:
+        parsed_duration = _parse_duration_secs(duration_str)
+        if parsed_duration is None:
+            return None, error_embed("Format durasi event: `1h`, `30m`, `2h30m`, `1d`.")
+        if parsed_duration < 300:
+            return None, error_embed("Durasi event minimal 5 menit.")
+        duration_secs = parsed_duration
+
     start_time = discord.utils.utcnow() + datetime.timedelta(seconds=delta_secs)
+    end_time   = start_time + datetime.timedelta(seconds=duration_secs)
     kwargs = {
         "name":          name,
         "start_time":    start_time,
@@ -1482,10 +1494,11 @@ async def _create_scheduled_event(guild: discord.Guild, name: str, starts_in: st
         kwargs["entity_type"] = (discord.EntityType.stage_instance
                                   if isinstance(voice_channel, discord.StageChannel)
                                   else discord.EntityType.voice)
+        kwargs["end_time"]    = end_time  # opsional buat voice/stage, tapi tetap kita set biar konsisten
     else:
         kwargs["entity_type"] = discord.EntityType.external
         kwargs["location"]    = (announce_channel.mention if announce_channel else guild.name)
-        kwargs["end_time"]    = start_time + datetime.timedelta(hours=2)
+        kwargs["end_time"]    = end_time  # wajib buat external
 
     try:
         event = await guild.create_scheduled_event(**kwargs)
@@ -1502,6 +1515,11 @@ async def _create_scheduled_event(guild: discord.Guild, name: str, starts_in: st
             value=discord.utils.format_dt(start_time, "F") + "\n" + discord.utils.format_dt(start_time, "R"),
             inline=True
         )
+        announce.add_field(
+            name="Selesai (perkiraan)",
+            value=discord.utils.format_dt(end_time, "t"),
+            inline=True
+        )
         if is_voice_event:
             announce.add_field(name="Lokasi", value=voice_channel.mention, inline=True)
         announce.add_field(name="Info & RSVP", value=f"[Klik di sini]({event.url})", inline=True)
@@ -1511,10 +1529,11 @@ async def _create_scheduled_event(guild: discord.Guild, name: str, starts_in: st
             pass
 
     confirm = base_embed("Event Created", None, color=COLOR_SUCCESS)
-    confirm.add_field(name="Nama",  value=event.name, inline=True)
-    confirm.add_field(name="Mulai", value=discord.utils.format_dt(start_time, "R"), inline=True)
+    confirm.add_field(name="Nama",     value=event.name, inline=True)
+    confirm.add_field(name="Mulai",    value=discord.utils.format_dt(start_time, "R"), inline=True)
+    confirm.add_field(name="Selesai",  value=discord.utils.format_dt(end_time, "R"), inline=True)
     confirm.add_field(name="Notifikasi", value=announce_channel.mention if announce_channel else "Tidak dikirim", inline=True)
-    confirm.add_field(name="Link",  value=f"[Klik di sini]({event.url})", inline=False)
+    confirm.add_field(name="Link",     value=f"[Klik di sini]({event.url})", inline=False)
     return event, confirm
 
 @bot.command(name="event")
@@ -1528,13 +1547,27 @@ async def pfx_event(ctx, sub: str = "", *, rest: str = ""):
             parts = shlex.split(rest) if rest.strip() else []
         except ValueError:
             parts = rest.split()
+
+        # Tarik flag --duration dari mana pun posisinya, sisanya tetap positional
+        duration_str = None
+        filtered = []
+        idx = 0
+        while idx < len(parts):
+            if parts[idx].lower() == "--duration" and idx + 1 < len(parts):
+                duration_str = parts[idx + 1]
+                idx += 2
+            else:
+                filtered.append(parts[idx])
+                idx += 1
+        parts = filtered
+
         if len(parts) < 2:
             return await ctx.send(embed=error_embed(
-                'Usage: `event create "<nama>" <mulai_dalam> [#channel] ["<deskripsi>"]`\n'
+                'Usage: `event create "<nama>" <mulai_dalam> [#channel] ["<deskripsi>"] [--duration <durasi>]`\n'
                 "`#channel` = text channel buat kirim notifikasi (default: channel ini).\n"
-                "Kalau isi `#channel` dengan voice/stage channel, event-nya bakal dibikin di situ,\n"
-                "notifikasi tetap dikirim ke channel tempat command ini dijalankan.\n"
-                'Contoh: `event create "Movie Night" 2h #pengumuman "Nonton bareng!"`'
+                "Kalau isi `#channel` dengan voice/stage channel, event-nya bakal dibikin di situ.\n"
+                "`--duration` opsional buat atur berapa lama event berlangsung (default: 2 jam).\n"
+                'Contoh: `event create "Movie Night" 2h #pengumuman "Nonton bareng!" --duration 3h`'
             ))
         name, starts_in = parts[0], parts[1]
         channel_arg  = parts[2] if len(parts) > 2 else None
@@ -1549,7 +1582,9 @@ async def pfx_event(ctx, sub: str = "", *, rest: str = ""):
         voice_channel    = channel_obj if isinstance(channel_obj, (discord.VoiceChannel, discord.StageChannel)) else None
         announce_channel = channel_obj if isinstance(channel_obj, discord.TextChannel) else ctx.channel
 
-        _, embed = await _create_scheduled_event(ctx.guild, name, starts_in, announce_channel, description, voice_channel)
+        _, embed = await _create_scheduled_event(
+            ctx.guild, name, starts_in, announce_channel, description, voice_channel, duration_str
+        )
         await ctx.send(embed=embed)
 
     elif sub == "list":
@@ -2040,8 +2075,9 @@ HELP_CATEGORIES = {
     "event": {
         "label": "Scheduled Event", "emoji": "📅",
         "value": (
-            '`event create "<nama>" <mulai_dalam> [#channel] ["<deskripsi>"]`\n'
+            '`event create "<nama>" <mulai_dalam> [#channel] ["<deskripsi>"] [--duration <durasi>]`\n'
             "`#channel` = text channel notifikasi (default: channel ini)\n"
+            "`--duration` = lama event berlangsung (default: 2 jam)\n"
             "`event list` · `event cancel <event_id>`\n"
             "Slash: `/createvent`"
         ),
@@ -2170,6 +2206,7 @@ async def pfx_help(ctx):
 @app_commands.describe(
     name="Nama event",
     starts_in="Kapan event mulai — contoh: 2h, 1d, 30m",
+    duration="Berapa lama event berlangsung — contoh: 3h, 1d (default: 2 jam)",
     announce_channel="Text channel buat kirim notifikasi/pengumuman event (default: channel ini)",
     voice_channel="Voice/Stage channel, isi kalau event-nya beneran di voice (opsional)",
     description="Deskripsi event (opsional)"
@@ -2178,6 +2215,7 @@ async def slash_createvent(
     i: discord.Interaction,
     name: str,
     starts_in: str,
+    duration: Optional[str] = None,
     announce_channel: Optional[discord.TextChannel] = None,
     voice_channel: Optional[discord.VoiceChannel] = None,
     description: Optional[str] = None
@@ -2187,7 +2225,7 @@ async def slash_createvent(
     await i.response.defer()
     target_announce = announce_channel or i.channel
     _, embed = await _create_scheduled_event(
-        i.guild, name, starts_in, target_announce, description, voice_channel
+        i.guild, name, starts_in, target_announce, description, voice_channel, duration
     )
     await i.followup.send(embed=embed)
 
